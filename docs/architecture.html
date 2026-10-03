@@ -604,7 +604,7 @@
     .controls, .flowtabs, main, .scenario-note{ padding-left: 18px; padding-right: 18px; }
     main{ gap:18px; }
     .canvas{ padding: 22px 14px 18px; }
-    .stage{ height: 420px; }
+    .stage{ height: 790px; }   /* narrow nodes wrap their text, so the rows need more room */
     .node{ width: 132px; padding: 12px; }
     .node .label{ font-size: 12px; }
     .node .tech{ font-size: 10px; }
@@ -705,6 +705,13 @@
   }
   .canvas.is-fullscreen .stage{ height: calc(100vh - 80px); }
   .canvas.is-fullscreen ~ aside{ display:none; }
+
+  /* CV Tailor: nodes sit on three centred columns around the companion, and narrow with the
+     stage, so they never overlap on a laptop or a phone. */
+  .stage{ --nw: min(150px, 28%); }
+  .stage .node{ width: var(--nw); }
+  .stage .node .port, .stage .node .tech{ overflow-wrap: anywhere; }   /* addresses like 127.0.0.1:8765 */
+  @media (max-width: 720px){ .stage .node .label{ font-size: 12px; } }   /* "companion" must fit an 89px node */
 </style>
 </head>
 <body>
@@ -813,7 +820,7 @@
            renderer below. No two wires cross. -->
 
       <!-- You, in the browser -->
-      <div class="node" data-role="user" data-id="user" style="left: 2%; top: 40%;">
+      <div class="node" data-role="user" data-id="user" style="left: calc(15% - var(--nw) / 2); top: 40%;">
         <div class="icon">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
         </div>
@@ -824,7 +831,7 @@
       </div>
 
       <!-- The hub -->
-      <div class="node" data-role="orch" data-id="companion" style="left: 42%; top: 40%;">
+      <div class="node" data-role="orch" data-id="companion" style="left: calc(50% - var(--nw) / 2); top: 40%;">
         <div class="icon">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </div>
@@ -835,7 +842,7 @@
       </div>
 
       <!-- Agents above the hub -->
-      <div class="node" data-role="vector" data-id="knowledge" style="left: 22%; top: 2%;">
+      <div class="node" data-role="vector" data-id="knowledge" style="left: calc(15% - var(--nw) / 2); top: 2%;">
         <div class="icon">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
         </div>
@@ -845,7 +852,7 @@
         <span class="step-badge">·</span>
       </div>
 
-      <div class="node" data-role="compute" data-id="plan" style="left: 42%; top: 2%;">
+      <div class="node" data-role="compute" data-id="plan" style="left: calc(50% - var(--nw) / 2); top: 2%;">
         <div class="icon">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44A2.5 2.5 0 0 1 4 18a2.5 2.5 0 0 1-1.55-4.45A2.5 2.5 0 0 1 4 9a2.5 2.5 0 0 1 1.55-4.45A2.5 2.5 0 0 1 9.5 2z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44A2.5 2.5 0 0 0 20 18a2.5 2.5 0 0 0 1.55-4.45A2.5 2.5 0 0 0 20 9a2.5 2.5 0 0 0-1.55-4.45A2.5 2.5 0 0 0 14.5 2z"/></svg>
         </div>
@@ -855,7 +862,7 @@
         <span class="step-badge">·</span>
       </div>
 
-      <div class="node" data-role="compute" data-id="qa" style="left: 62%; top: 2%;">
+      <div class="node" data-role="compute" data-id="qa" style="left: calc(85% - var(--nw) / 2); top: 2%;">
         <div class="icon">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         </div>
@@ -866,7 +873,7 @@
       </div>
 
       <!-- Deterministic gate to the right -->
-      <div class="node" data-role="embed" data-id="checks" style="left: 82%; top: 40%;">
+      <div class="node" data-role="embed" data-id="checks" style="left: calc(85% - var(--nw) / 2); top: 40%;">
         <div class="icon">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
         </div>
@@ -877,7 +884,7 @@
       </div>
 
       <!-- Files and the renderer below the hub -->
-      <div class="node" data-role="vector" data-id="files" style="left: 22%; top: 78%;">
+      <div class="node" data-role="vector" data-id="files" style="left: calc(15% - var(--nw) / 2); top: 77%;">
         <div class="icon">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
         </div>
@@ -887,7 +894,7 @@
         <span class="step-badge">·</span>
       </div>
 
-      <div class="node" data-role="seed" data-id="renderer" style="left: 42%; top: 78%;">
+      <div class="node" data-role="seed" data-id="renderer" style="left: calc(50% - var(--nw) / 2); top: 77%;">
         <div class="icon">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         </div>
@@ -897,7 +904,7 @@
         <span class="step-badge">·</span>
       </div>
 
-      <div class="node" data-role="compute" data-id="letter" style="left: 62%; top: 78%;">
+      <div class="node" data-role="compute" data-id="letter" style="left: calc(85% - var(--nw) / 2); top: 77%;">
         <div class="icon">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
         </div>
