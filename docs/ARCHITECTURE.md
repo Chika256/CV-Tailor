@@ -1,5 +1,7 @@
 # Architecture
 
+![How a job flows through the extension, the companion and the agents](architecture.svg)
+
 ## Components
 
 | Part | Responsibility |

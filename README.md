@@ -18,15 +18,9 @@ LLM-written CVs fail in two ways: they fabricate, and they wreck formatting. Thi
 
 ## How it works
 
-```
- browser extension ──job text──▶ local companion (127.0.0.1) ──input.md──▶ OpenCode agent
-        ▲                              │                                         │
-        │                              │ ◀──────── JSON plan ────────────────────┘
-        │                              ├─ validate plan against master CV
-        │                              ├─ apply to a copy of the DOCX (stdlib only)
-        │                              ├─ render + layout check (Word or LibreOffice)
-        └───── status, review ─────────┴─ tailored DOCX, change report, cover letter
-```
+![How a job flows: the extension sends a listing; the local companion validates the model's JSON plan, applies it to a copy and checks the layout; the agents only read and return JSON.](docs/architecture.svg)
+
+The details, including each module and the trust boundaries, are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Quick start
 

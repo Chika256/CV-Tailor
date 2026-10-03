@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 470" width="960" height="470" role="img" aria-labelledby="title desc">
+  <title id="title">How CV Tailor processes a job</title>
+  <desc id="desc">The browser extension sends a listing to the local companion. The companion hashes and reads the master CV, then gives one input file to an OpenCode planning agent, which returns a JSON plan or clarification questions for the user. The companion validates the plan against the real CV, applies it to a copy, renders it and runs free layout checks; only if those flag a problem does an AI agent inspect the PDF and revise. The report and tailored CV go back to the extension.</desc>
+  <style>
+    .bg { fill: #ffffff; }
+    .lane { fill: #f6f8fa; stroke: #d0d7de; }
+    .lane-agent { fill: #fff8e5; stroke: #e3c77a; }
+    .box { fill: #ffffff; stroke: #8c959f; }
+    .box-agent { fill: #ffffff; stroke: #bf8700; }
+    .title { fill: #1f2328; font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .text { fill: #57606a; font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .lane-label { fill: #57606a; font: 600 11px system-ui, -apple-system, "Segoe UI", sans-serif; letter-spacing: 0.06em;
+                  paint-order: stroke; stroke: #f6f8fa; stroke-width: 6px; stroke-linejoin: round; }
+    .lane-label.on-agent { stroke: #fff8e5; }
+    .edge-label { fill: #57606a; font: italic 11px system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .edge { stroke: #57606a; stroke-width: 1.5; fill: none; }
+    .edge-dashed { stroke: #57606a; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+    .head { fill: #57606a; }
+    .note { fill: #57606a; font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; }
+      .lane { fill: #161b22; stroke: #30363d; }
+      .lane-agent { fill: #1f1a0e; stroke: #5c4813; }
+      .box { fill: #0d1117; stroke: #6e7681; }
+      .box-agent { fill: #0d1117; stroke: #d29922; }
+      .title { fill: #e6edf3; }
+      .text, .lane-label, .edge-label, .note { fill: #9198a1; }
+      .lane-label { stroke: #161b22; }
+      .lane-label.on-agent { stroke: #1f1a0e; }
+      .edge, .edge-dashed { stroke: #9198a1; }
+      .head { fill: #9198a1; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="head" d="M0,0 L10,5 L0,10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="470" rx="8"/>
+
+  <!-- Lanes -->
+  <rect class="lane" x="10" y="12" width="940" height="106" rx="6"/>
+  <rect class="lane" x="10" y="138" width="940" height="134" rx="6"/>
+  <rect class="lane-agent" x="10" y="292" width="940" height="118" rx="6"/>
+
+  <!-- Extension lane -->
+  <rect class="box" x="22" y="42" width="136" height="62" rx="5"/>
+  <text class="title" x="90" y="66" text-anchor="middle">Capture listing</text>
+  <text class="text" x="90" y="84" text-anchor="middle">from the open tab</text>
+
+  <rect class="box" x="178" y="42" width="136" height="62" rx="5"/>
+  <text class="title" x="246" y="66" text-anchor="middle">Answer questions</text>
+  <text class="text" x="246" y="84" text-anchor="middle">once; reused later</text>
+
+  <rect class="box" x="802" y="42" width="136" height="62" rx="5"/>
+  <text class="title" x="870" y="66" text-anchor="middle">Review changes</text>
+  <text class="text" x="870" y="84" text-anchor="middle">open tailored CV</text>
+
+  <!-- Companion lane -->
+  <rect class="box" x="22" y="168" width="136" height="90" rx="5"/>
+  <text class="title" x="90" y="190" text-anchor="middle">Preflight</text>
+  <text class="text" x="90" y="208" text-anchor="middle">hash master CV</text>
+  <text class="text" x="90" y="224" text-anchor="middle">extract paragraphs</text>
+  <text class="text" x="90" y="240" text-anchor="middle">score keyword fit</text>
+
+  <rect class="box" x="334" y="168" width="136" height="90" rx="5"/>
+  <text class="title" x="402" y="190" text-anchor="middle">Validate plan</text>
+  <text class="text" x="402" y="208" text-anchor="middle">exact original text</text>
+  <text class="text" x="402" y="224" text-anchor="middle">editable paragraphs</text>
+  <text class="text" x="402" y="240" text-anchor="middle">length caps</text>
+
+  <rect class="box" x="490" y="168" width="136" height="90" rx="5"/>
+  <text class="title" x="558" y="190" text-anchor="middle">Apply to a copy</text>
+  <text class="text" x="558" y="208" text-anchor="middle">stdlib DOCX edit</text>
+  <text class="text" x="558" y="224" text-anchor="middle">master hash</text>
+  <text class="text" x="558" y="240" text-anchor="middle">re-checked</text>
+
+  <rect class="box" x="646" y="168" width="136" height="90" rx="5"/>
+  <text class="title" x="714" y="190" text-anchor="middle">Layout check</text>
+  <text class="text" x="714" y="208" text-anchor="middle">render with Word</text>
+  <text class="text" x="714" y="224" text-anchor="middle">or LibreOffice</text>
+  <text class="text" x="714" y="240" text-anchor="middle">free page checks</text>
+
+  <rect class="box" x="802" y="168" width="136" height="90" rx="5"/>
+  <text class="title" x="870" y="190" text-anchor="middle">Report</text>
+  <text class="text" x="870" y="208" text-anchor="middle">before → after</text>
+  <text class="text" x="870" y="224" text-anchor="middle">tailored DOCX</text>
+  <text class="text" x="870" y="240" text-anchor="middle">application log</text>
+
+  <!-- Agent lane -->
+  <rect class="box-agent" x="178" y="322" width="136" height="76" rx="5"/>
+  <text class="title" x="246" y="344" text-anchor="middle">Plan agent</text>
+  <text class="text" x="246" y="362" text-anchor="middle">reads one input file</text>
+  <text class="text" x="246" y="378" text-anchor="middle">plan or questions</text>
+
+  <rect class="box-agent" x="646" y="322" width="136" height="76" rx="5"/>
+  <text class="title" x="714" y="344" text-anchor="middle">AI page check</text>
+  <text class="text" x="714" y="362" text-anchor="middle">reads the PDF and</text>
+  <text class="text" x="714" y="378" text-anchor="middle">revises once</text>
+
+  <!-- Edges -->
+  <path class="edge" d="M90,104 V166" marker-end="url(#arrow)"/>
+  <text class="edge-label" x="96" y="136">listing</text>
+
+  <path class="edge" d="M90,258 V368 H176" marker-end="url(#arrow)"/>
+  <text class="edge-label" x="96" y="286">input.md</text>
+
+  <path class="edge" d="M314,352 H402 V260" marker-end="url(#arrow)"/>
+  <text class="edge-label" x="320" y="344">JSON plan</text>
+
+  <path class="edge-dashed" d="M236,322 V106" marker-end="url(#arrow)"/>
+  <text class="edge-label" x="230" y="216" text-anchor="end">questions</text>
+  <path class="edge-dashed" d="M256,104 V320" marker-end="url(#arrow)"/>
+  <text class="edge-label" x="262" y="216">answers</text>
+
+  <path class="edge" d="M470,213 H488" marker-end="url(#arrow)"/>
+  <path class="edge" d="M626,213 H644" marker-end="url(#arrow)"/>
+  <path class="edge" d="M782,213 H800" marker-end="url(#arrow)"/>
+
+  <path class="edge-dashed" d="M704,258 V320" marker-end="url(#arrow)"/>
+  <text class="edge-label" x="698" y="286" text-anchor="end">only if flagged</text>
+  <path class="edge-dashed" d="M724,322 V260" marker-end="url(#arrow)"/>
+  <text class="edge-label" x="730" y="286">fixes</text>
+
+  <path class="edge" d="M870,168 V106" marker-end="url(#arrow)"/>
+
+  <!-- Lane labels last, with a halo, so arrows pass behind them -->
+  <text class="lane-label" x="24" y="31">BROWSER EXTENSION</text>
+  <text class="lane-label" x="24" y="157">LOCAL COMPANION · DETERMINISTIC CODE ON 127.0.0.1 · OWNS EVERY FILE WRITE</text>
+  <text class="lane-label on-agent" x="24" y="311">OPENCODE AGENTS · READ-ONLY, NO SHELL · OUTPUT IS UNTRUSTED JSON</text>
+
+  <text class="note" x="480" y="446" text-anchor="middle">The model never edits a file. Its JSON is validated against the real CV before anything is written, and the master CV is never changed.</text>
+</svg>
