@@ -7,6 +7,7 @@ import os
 import stat
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -16,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from cv_tailor.cli import main
 from cv_tailor.config import CONFIG_NAME, load_config
 from cv_tailor.docx_io import extract_cv
+from cv_tailor.render import Layout, Renderer
 from cv_tailor.server import TailoringCompanion
 
 FAKE_AGENT = r'''
@@ -27,6 +29,16 @@ if pwd and os.path.normcase(os.path.realpath(pwd)) != os.path.normcase(os.path.r
 args = sys.argv
 agent = args[args.index("--agent") + 1]
 text = open(re.search(r"file (\S+\.md)", args[2]).group(1).replace("\\", "/"), encoding="utf8").read()
+with open("agents-called.txt", "a") as log:
+    log.write(agent + "\n")
+# A usage limit, the way OpenCode reports one: once for "[usage limit]", every time for the long one.
+if agent == "cv-tailor" and "[usage limit" in text:
+    long = "[usage limit long]" in text
+    if long or not os.path.exists("limit-hit"):
+        open("limit-hit", "w").close()
+        print('{"type":"error","error":{"data":{"message":"The usage limit has been reached"}}}')
+        print("primary-reset-after-seconds: " + ("99999" if long else "120"), file=sys.stderr)
+        raise SystemExit(1)
 if agent == "cv-tailor" and "[no changes]" in text:
     out = {"schema_version": 1, "status": "ready", "job": {"title": "T", "company": "C"}, "replacements": [],
            "change_summary": ["Already fits."], "unsupported_requirements": [], "recommendations": []}
@@ -39,10 +51,33 @@ elif agent == "cv-tailor":
 elif agent == "cv-tailor-letter":
     out = {"schema_version": 1, "status": "ready", "salutation": "Dear Team,",
            "paragraphs": ["First paragraph.", "Second paragraph."], "closing": "Kind regards,"}
+elif agent == "cv-tailor-qa":
+    pages = int(re.search(r"Pages rendered: (\d+)", text).group(1))
+    out = {"schema_version": 1, "pages_inspected": pages, "application_ready": True, "issues": [],
+           "notes": ["Inspected by the stand-in."]}
 else:
     raise SystemExit(3)
 print(json.dumps({"type": "text", "part": {"text": json.dumps(out)}}))
 '''
+
+class StubRenderer(Renderer):
+    """Writes a placeholder PDF and reports every paragraph on page 1, so layout checks pass."""
+
+    name = "stub"
+
+    def __init__(self, tailored_pages: int = 1) -> None:
+        self.tailored_pages = tailored_pages  # > 1 makes the tailored copy fail the page-count check
+
+    def render(self, docx: Path, pdf: Path | None) -> Layout:
+        if pdf is not None:
+            pdf.write_bytes(b"%PDF-1.4 stand-in")
+        paragraphs = [
+            {"index": index, "start_page": 1, "end_page": 1, "is_list": False, "length": len(item["text"])}
+            for index, item in enumerate(extract_cv(docx, "", None)["paragraphs"], 1)
+        ]
+        pages = 1 if docx.name == "master_cv.docx" else self.tailored_pages
+        return Layout(pages, paragraphs, pdf, self.name)
+
 
 JOB = {
     "url": "https://example.com/jobs/1?utm=x",
@@ -75,6 +110,27 @@ class PipelineTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.directory.cleanup()
+
+    def submit(self, marker: str = "") -> str:
+        return self.app.create_job({**JOB, "description": f"{JOB['description']} {marker}"})["job_id"]
+
+    def run_job(self, marker: str = "") -> dict:
+        job_id = self.submit(marker)
+        self.app.work_queue.join()
+        return self.app.get_job(job_id)
+
+    def wait_for_state(self, job_id: str, state: str) -> dict:
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            status = self.app.get_job(job_id)
+            if status["state"] == state:
+                return status
+            time.sleep(0.05)
+        self.fail(f"job never reached {state!r}: {status}")
+
+    def agents_called(self) -> list[str]:
+        log = self.root / "agents-called.txt"
+        return log.read_text(encoding="utf-8").split() if log.exists() else []
 
     def test_job_is_tailored_deduplicated_and_logged(self) -> None:
         # A PWD inherited from the launching shell must not leak into the agent process.
@@ -116,6 +172,51 @@ class PipelineTests(unittest.TestCase):
         self.assertIn("- None. See the change summary for why.", report)
         # An empty plan must not replace the reusable plan for this role family.
         self.assertEqual(list((self.root / "data/runtime/templates").glob("*.json")), [])
+
+    # ai_qa_mode: the AI page inspection costs tokens, so by default it runs only when the free checks fail.
+
+    def test_ai_qa_is_skipped_when_the_automatic_layout_checks_pass(self) -> None:
+        self.app.renderer = StubRenderer()
+        status = self.run_job()
+        self.assertEqual(status["state"], "completed", status.get("message"))
+        self.assertNotIn("cv-tailor-qa", self.agents_called())
+        qa = json.loads((self.root / status["preview_path"]).with_name("qa.json").read_text(encoding="utf-8"))
+        self.assertIn("AI page inspection was not needed", qa["notes"][0])
+
+    def test_ai_qa_runs_when_the_automatic_layout_checks_fail(self) -> None:
+        self.app.renderer = StubRenderer(tailored_pages=2)  # the tailored copy grew by a page
+        status = self.run_job()
+        self.assertIn("cv-tailor-qa", self.agents_called())
+        self.assertEqual(status["state"], "completed_with_warning")
+        self.assertIn("page count changed", status["message"])
+
+    def test_ai_qa_mode_always_inspects_even_a_clean_layout(self) -> None:
+        self.app.renderer = StubRenderer()
+        self.app.config["ai_qa_mode"] = "always"
+        status = self.run_job()
+        self.assertEqual(status["state"], "completed", status.get("message"))
+        self.assertIn("cv-tailor-qa", self.agents_called())
+
+    # Usage limits: a short one pauses the queue and resumes; one longer than six hours fails the job.
+
+    def test_usage_limit_pauses_the_queue_then_resumes_the_job(self) -> None:
+        self.app.PAUSE_CHECK_SECONDS = 0.05
+        job_id = self.submit("[usage limit]")
+        status = self.wait_for_state(job_id, "paused")
+        self.assertRegex(status["message"], r"^Usage limit reached\. Resuming automatically at \d\d:\d\d\.$")
+        self.assertGreater(self.app.paused_until - time.time(), 150)  # the 120 s reset plus a 60 s margin
+        self.app.paused_until = 0.0  # the limit has reset
+        self.app.work_queue.join()
+        status = self.app.get_job(job_id)
+        self.assertEqual(status["state"], "completed", status.get("message"))
+        self.assertEqual(self.agents_called().count("cv-tailor"), 2)
+
+    def test_usage_limit_longer_than_six_hours_fails_instead_of_pausing(self) -> None:
+        self.app.PAUSE_CHECK_SECONDS = 0.05
+        # Poll rather than join the queue: if the job wrongly paused, joining would wait ~28 hours.
+        status = self.wait_for_state(self.submit("[usage limit long]"), "failed")
+        self.assertIn("Try again later", status["message"])
+        self.assertEqual(self.app.paused_until, 0.0)
 
 
 if __name__ == "__main__":

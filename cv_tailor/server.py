@@ -64,6 +64,8 @@ def utc_now() -> str:
 
 
 class TailoringCompanion:
+    PAUSE_CHECK_SECONDS = 5.0  # how often a paused worker checks whether the usage limit has reset
+
     def __init__(self, config: dict[str, Any], root: Path) -> None:
         self.config = config
         self.root = root.resolve()
@@ -364,7 +366,7 @@ class TailoringCompanion:
             with self.queue_lock:
                 self.queued_ids.discard(job_id)
             while time.time() < self.paused_until:
-                time.sleep(5)
+                time.sleep(self.PAUSE_CHECK_SECONDS)
             is_letter = job_id.startswith("letter:")
             base_id = job_id.removeprefix("letter:")
             try:
