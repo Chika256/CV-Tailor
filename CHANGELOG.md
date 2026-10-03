@@ -29,6 +29,7 @@ First public release.
 - `cv-tailor init` creates a workspace (with `--sample`, a fictional CV to try the tool); `cv-tailor doctor` checks the setup; `cv-tailor serve` runs the companion.
 - `cv-tailor usage` reports the tokens each agent run used, as OpenCode reported them.
 - Two fictional listings in `examples/` to try the sample CV against: one it already fits, one it only partly fits.
+- An interactive architecture diagram (`docs/architecture.html`) that steps through five scenarios with real payloads.
 - Structured `key=value` logs tagged with the job id, in a rotating file. Logs never contain CV text, listings or answers.
 - A usage-limit error pauses the queue and resumes after the reset.
 - `GET /health` reports the version and active renderer.

@@ -1,11 +1,11 @@
 # Architecture
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="architecture-dark.svg">
-  <img alt="How a job flows: the extension sends a listing; an untrusted OpenCode agent reads one input file and returns a JSON plan; the local companion validates it against the real CV, applies it to a copy, checks the layout, and only calls the AI page check if a free check flags a problem." src="architecture.svg">
-</picture>
+<a href="architecture.html"><picture>
+  <source media="(prefers-color-scheme: dark)" srcset="architecture-dark.png">
+  <img alt="The interactive architecture diagram on step 4 of Tailor a CV: the local companion sits in the centre with the browser extension, knowledge base, plan agent, AI page check, rule checks, CV files, page renderer and cover-letter agent around it, and the side panel shows the plan being checked against the real CV." src="architecture.png">
+</picture></a>
 
-The diagram's source is [architecture.excalidraw](architecture.excalidraw); open it at [excalidraw.com](https://excalidraw.com) to edit it, then export both SVGs (light, and dark with the dark-mode export option).
+Open [`architecture.html`](architecture.html) in a browser for the interactive version: pick a scenario, step through it, and see the real payload at each step. The flows below describe the same scenarios in text.
 
 ## Components
 
@@ -27,6 +27,22 @@ The diagram's source is [architecture.excalidraw](architecture.excalidraw); open
 | `cv_tailor/knowledge.py` | SQLite store of answers, notes, other-CV evidence and the application log. |
 | `cv_tailor/applicant.py` | Editable applicant profile used by autofill. |
 | `cv_tailor/templates/` | Agent prompts and `CV_TAILORING_AGENT.md`, copied into a workspace by `cv-tailor init`. |
+
+## Flows
+
+The companion is the hub: it makes every call. The agents read the one input file they are given and reply with JSON; they never call each other or the browser, and never write a file. Each scenario in the interactive diagram is listed here step by step.
+
+**1. Tailor a CV.** (1) The extension posts the listing to `POST /jobs`; the companion skips a repeat, hashes the master CV and scores keyword fit locally. (2) It writes `input.md` and runs the plan agent, which may read only that file. (3) The agent returns `result.json`: replacements with each paragraph's exact current text, plus requirements the CV cannot support. (4) `validate_tailoring_result` checks every replacement against the CV. (5) `docx_io.apply_plan` applies the plan to a copy; the master's hash is re-checked. (6, 7) The renderer turns the copy into a PDF and returns page facts in `layout.json`. (8) `deterministic_layout_issues` checks page count, split paragraphs, stranded headings and lone bullets. (9) The popup shows the result, the change report and the tailored CV.
+
+**2. Ask, don't guess.** When the CV lacks evidence for a requirement, the plan agent returns `needs_clarification` with up to ten questions instead of a plan. The job pauses, the popup shows the questions, and `POST /jobs/<id>/answers` stores the answer with its questions in the knowledge base (`knowledge.record_answers`). The plan agent runs again with the answer in its input, and later jobs get it from `knowledge.snapshot` without asking.
+
+**3. Bad plan rejected.** A replacement that names a locked paragraph, misquotes the CV's text, runs too long or pushes the plan past 40 changes or 700 added characters raises `PlanError`. The job fails with that reason before any file is written, and the master CV is unchanged.
+
+**4. Layout fix.** Only when the free layout checks flag something (or with `ai_qa_mode: "always"`) does the AI page check get `qa_input.md` and `preview.pdf`. If it reports the CV is not ready, the revision agent receives the problems and the current plan in `revise_input.md` and returns `revised-result.json`, which is validated, applied to a fresh copy, rendered and checked like the first plan. One revision is allowed by default (`qa_revision_attempts`); if problems remain, the job completes with a warning.
+
+**5. Cover letter.** `POST /jobs/<id>/cover-letter` runs the letter agent on the same kind of input file. It returns `letter.json` (salutation, paragraphs, closing), which the companion writes as a DOCX beside the tailored CV.
+
+**Renderer modes.** The toggle in the interactive diagram switches the page renderer. Word (Windows) reports the page every paragraph starts and ends on, so every layout check runs. LibreOffice (any OS) reports the page count, and paragraph positions only when `pypdf` is installed; without it, only the page count is checked.
 
 ## Job lifecycle
 

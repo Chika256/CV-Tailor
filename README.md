@@ -18,12 +18,12 @@ LLM-written CVs fail in two ways: they fabricate, and they wreck formatting. Thi
 
 ## How it works
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/architecture-dark.svg">
-  <img alt="How a job flows: the extension sends a listing; an untrusted OpenCode agent reads one input file and returns a JSON plan; the local companion validates it against the real CV, applies it to a copy, checks the layout, and only calls the AI page check if a free check flags a problem." src="docs/architecture.svg">
-</picture>
+<a href="docs/architecture.html"><picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/architecture-dark.png">
+  <img alt="The interactive architecture diagram on step 4 of Tailor a CV: the local companion sits in the centre with the browser extension, knowledge base, plan agent, AI page check, rule checks, CV files, page renderer and cover-letter agent around it, and the side panel shows the plan being checked against the real CV." src="docs/architecture.png">
+</picture></a>
 
-The details, including each module and the trust boundaries, are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The picture is a still of an interactive diagram. Open [`docs/architecture.html`](docs/architecture.html) from a clone in your browser to step through five scenarios (tailoring a CV, clarification questions, a rejected plan, a layout fix and a cover letter) with the real payloads at each step. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) describes the same flows in text, with each module and the trust boundaries.
 
 ## Measured token use
 
@@ -129,4 +129,4 @@ Layout: `cv_tailor/` (companion), `extension/` (browser extension), `cv_tailor/t
 
 ## Licence
 
-MIT. The bundled Geist font is under the SIL Open Font Licence (`extension/fonts/OFL.txt`). The architecture diagram embeds a subset of Cascadia Code, also under the SIL Open Font Licence.
+MIT. The bundled Geist font is under the SIL Open Font Licence (`extension/fonts/OFL.txt`). The interactive architecture diagram is built from the MIT-licensed template of [architecture-diagram-skill](https://github.com/konraddzbik/architecture-diagram-skill) by Konrad Dzbik; its licence is reproduced in `docs/architecture.html`.
