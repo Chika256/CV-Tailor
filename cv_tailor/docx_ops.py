@@ -6,7 +6,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-
 PARAGRAPH_ID = re.compile(r"^document:p(\d{4})$")
 
 

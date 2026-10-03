@@ -3,14 +3,14 @@ from __future__ import annotations
 import base64
 import hmac
 import json
+import os
 import queue
 import re
 import secrets
 import shutil
 import subprocess
-import threading
-import os
 import sys
+import threading
 import time
 import traceback
 import uuid
@@ -22,6 +22,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from . import docx_io
+from .applicant import PROFILE_FIELDS, ProfileStore
 from .docx_ops import (
     PlanError,
     read_json,
@@ -31,8 +32,6 @@ from .docx_ops import (
     write_json,
 )
 from .knowledge import KnowledgeBase
-from .applicant import PROFILE_FIELDS, ProfileStore
-from .render import RenderError, select_renderer
 from .prep import (
     build_input,
     deterministic_layout_issues,
@@ -42,7 +41,7 @@ from .prep import (
     validate_letter,
     write_cover_letter_docx,
 )
-
+from .render import RenderError, select_renderer
 
 SAFE_FILENAME = re.compile(r"[^A-Za-z0-9]+")
 MAX_PAUSE_SECONDS = 6 * 3600

@@ -30,3 +30,5 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+# Long lines are prose strings (prompts, messages, sample CV text); the formatter does not wrap them.
+ignore = ["E501"]

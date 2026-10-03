@@ -159,7 +159,7 @@ def deterministic_layout_issues(layout: dict[str, Any], expected_pages: int) -> 
     for item in paragraphs:
         if item.get("start_page") != item.get("end_page") and item.get("length", 0) > 0:
             issues.append(f"Paragraph {item.get('index')} is split across a page break.")
-    for position, (current, following) in enumerate(zip(paragraphs, paragraphs[1:])):
+    for position, (current, following) in enumerate(zip(paragraphs, paragraphs[1:], strict=False)):
         if current.get("end_page") == following.get("start_page") or current.get("length", 0) == 0:
             continue
         if following.get("length", 0) == 0:

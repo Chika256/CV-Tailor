@@ -45,7 +45,7 @@ class DocxIoTests(unittest.TestCase):
         edited = extract_cv(output, "", None)["paragraphs"]
         original = self.cv["paragraphs"]
         self.assertEqual(len(edited), len(original))
-        for before, after in zip(original, edited):
+        for before, after in zip(original, edited, strict=True):
             if before["id"] == target["id"]:
                 self.assertEqual(after["text"], replacement["new_text"])
                 self.assertEqual(after["list_type"], 2)  # still a bullet
