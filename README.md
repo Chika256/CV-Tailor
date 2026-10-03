@@ -22,6 +22,20 @@ LLM-written CVs fail in two ways: they fabricate, and they wreck formatting. Thi
 
 The details, including each module and the trust boundaries, are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Measured token use
+
+With the default settings, a job whose layout check passes uses one planning run of about **9,500 tokens**. The AI page check and the cover letter run only when needed or asked for.
+
+| Agent | Runs | Median tokens | Range | Median time |
+| --- | --- | --- | --- | --- |
+| Planning (`cv-tailor`) | 6 | 9,503 | 9,218–9,545 | 14 s |
+| AI page check (`cv-tailor-qa`) | 5 | 7,150 | 7,047–11,019 | 14 s |
+| Cover letter (`cv-tailor-letter`) | 5 | 6,498 | 6,410–6,526 | 13 s |
+
+**Method.** Five jobs were run one after another on 3 October 2026 at commit `398a8a1`, in a fresh workspace from `cv-tailor init --sample`. Each job used the fictional sample CV (17 paragraphs, one page) and `examples/sample_job.txt`. The model was `openai/gpt-6-luna` at variant `medium` through OpenCode, rendering with Word on Windows. `ai_qa_mode` was set to `always` so that every job also measured the page check, and a cover letter was requested for each job. The figures are OpenCode's own token counts for each model call, summed per agent run by `cv-tailor usage`. The total includes cached input; about three quarters of the planning tokens were input the provider served from its prompt cache. The first job asked clarification questions once, so it planned twice. Its answer was stored, and the other four jobs planned once.
+
+**Limits.** All five plans recommended no changes, because the sample CV already covers the sample listing. A plan with edits produces more output tokens. A real CV is longer than the sample, so its input is larger. Run `cv-tailor usage` in your own workspace to see your figures.
+
 ## Quick start
 
 Requires Python 3.11+, [OpenCode](https://opencode.ai) signed in to a model provider, and Chrome or Edge.
