@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hmac
 import json
+import logging
 import os
 import queue
 import re
@@ -21,7 +22,7 @@ from pathlib import Path
 from typing import Any, cast
 from urllib.parse import parse_qs, urlparse
 
-from . import __version__, docx_io
+from . import __version__, docx_io, logs
 from .applicant import PROFILE_FIELDS, ProfileStore
 from .docx_ops import (
     PlanError,
@@ -32,6 +33,7 @@ from .docx_ops import (
     write_json,
 )
 from .knowledge import KnowledgeBase
+from .logs import current_job, event
 from .prep import (
     build_input,
     deterministic_layout_issues,
@@ -170,6 +172,7 @@ class TailoringCompanion:
         if payload.get("force") is not True:
             existing = self._find_duplicate(normalized["fingerprint"])
             if existing:
+                event("job_duplicate", job=existing)
                 return {**self.get_job(existing), "duplicate": True}
         job_id = f"{datetime.now():%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:8]}"
         job_dir = self.jobs_dir / job_id
@@ -177,6 +180,7 @@ class TailoringCompanion:
         normalized["job_id"] = job_id
         normalized["received_at"] = utc_now()
         write_json(job_dir / "job.json", normalized)
+        event("job_received", job=job_id, source=normalized["source"], characters=len(normalized["description"]))
         self._update_status(job_id, state="queued", message="Waiting for the tailoring worker")
         self.enqueue(job_id)
         return self.get_job(job_id)
@@ -356,9 +360,19 @@ class TailoringCompanion:
         job_dir = self.jobs_dir / job_id
         path = job_dir / "status.json"
         status = read_json(path) if path.exists() else {"created_at": utc_now()}
+        changed = {key for key in ("state", "stage", "letter_state") if key in updates and updates[key] != status.get(key)}
         status.update(updates)
         status["updated_at"] = utc_now()
         write_json(path, status)
+        # Every job's lifecycle passes through here, so this one hook traces it in the log.
+        if "state" in changed or "stage" in changed:
+            state = status.get("state")
+            level = logging.WARNING if state in {"failed", "completed_with_warning"} else logging.INFO
+            event("status", level, job=job_id, state=state, stage=status.get("stage"), message=status.get("message"))
+        if "letter_state" in changed:
+            state = status.get("letter_state")
+            level = logging.WARNING if state == "failed" else logging.INFO
+            event("letter_status", level, job=job_id, state=state, message=status.get("letter_message"))
 
     def _worker_loop(self) -> None:
         while True:
@@ -369,6 +383,7 @@ class TailoringCompanion:
                 time.sleep(self.PAUSE_CHECK_SECONDS)
             is_letter = job_id.startswith("letter:")
             base_id = job_id.removeprefix("letter:")
+            context = current_job.set(base_id)
             try:
                 if is_letter:
                     self._process_letter(base_id)
@@ -378,15 +393,19 @@ class TailoringCompanion:
                 self._pause_for_limit(job_id, base_id, is_letter, limited)
             except Exception as error:  # The worker must survive one bad application.
                 job_dir = self.jobs_dir / base_id
-                (job_dir / "companion-error.log").write_text(traceback.format_exc(), encoding="utf-8")
+                trace = job_dir / "companion-error.log"
+                trace.write_text(traceback.format_exc(), encoding="utf-8")
+                event("job_error", logging.ERROR, error=type(error).__name__, traceback=trace.relative_to(self.root))
                 if is_letter:
                     self._update_status(base_id, letter_state="failed", letter_message=str(error))
                 else:
                     self._update_status(base_id, state="failed", message=str(error))
             finally:
+                current_job.reset(context)
                 self.work_queue.task_done()
 
     def _pause_for_limit(self, job_id: str, base_id: str, is_letter: bool, limited: RateLimited) -> None:
+        event("usage_limit", logging.WARNING, reset_seconds=limited.seconds, pause=limited.seconds <= MAX_PAUSE_SECONDS)
         if limited.seconds > MAX_PAUSE_SECONDS:
             message = f"{limited}. Try again later."
             if is_letter:
@@ -726,18 +745,20 @@ class TailoringCompanion:
             if attachment.exists():
                 command.extend(["--file", str(attachment)])
         timeout = int(self.config.get("opencode_timeout_seconds", 1200))
-        output = self._run_process(command, job_dir / f"opencode-{agent}.log", timeout=timeout)
+        event("agent_start", agent=agent, model=command[command.index("--model") + 1], variant=variant)
+        output = self._run_process(command, job_dir / f"opencode-{agent}.log", timeout=timeout, agent=agent)
         parsed = _parse_opencode_json(output)
         if agent not in AGENT_FILES:
             raise RuntimeError(f"Unsupported OpenCode agent: {agent}")
         output_name = AGENT_FILES[agent][1]
         write_json(job_dir / output_name, parsed)
 
-    def _run_process(self, command: list[str], log_path: Path, timeout: int) -> str:
+    def _run_process(self, command: list[str], log_path: Path, timeout: int, agent: str) -> str:
         # OpenCode takes its project directory from $PWD when set, and cwd= does not
         # update it. An inherited PWD (e.g. from Git Bash) would point OpenCode at the
         # wrong directory, where the workspace agents do not exist.
         env = {**os.environ, "PWD": str(self.root)}
+        started = time.monotonic()
         try:
             completed = subprocess.run(
                 command,
@@ -752,7 +773,16 @@ class TailoringCompanion:
                 check=False,
             )
         except subprocess.TimeoutExpired as error:
+            event("agent_timeout", logging.WARNING, agent=agent, seconds=timeout)
             raise RuntimeError(f"Process timed out after {timeout} seconds: {command[0]}") from error
+        event(
+            "agent_done",
+            logging.INFO if completed.returncode == 0 else logging.WARNING,
+            agent=agent,
+            exit_code=completed.returncode,
+            seconds=round(time.monotonic() - started, 1),
+            output=log_path.relative_to(self.root),
+        )
         log_path.write_text(
             f"COMMAND: {json.dumps(command, ensure_ascii=True)}\n"
             f"EXIT CODE: {completed.returncode}\n\nSTDOUT\n{completed.stdout}\n\nSTDERR\n{completed.stderr}",
@@ -893,6 +923,8 @@ class CompanionHandler(BaseHTTPRequestHandler):
         except FileNotFoundError as error:
             self._send_json({"error": str(error)}, HTTPStatus.NOT_FOUND)
         except Exception as error:
+            event("http_error", logging.ERROR, method=self.command, path=urlparse(self.path).path,
+                  error=type(error).__name__, detail=error)
             self._send_json({"error": str(error)}, HTTPStatus.INTERNAL_SERVER_ERROR)
 
     def do_POST(self) -> None:
@@ -972,6 +1004,8 @@ class CompanionHandler(BaseHTTPRequestHandler):
         except FileNotFoundError as error:
             self._send_json({"error": str(error)}, HTTPStatus.NOT_FOUND)
         except Exception as error:
+            event("http_error", logging.ERROR, method=self.command, path=urlparse(self.path).path,
+                  error=type(error).__name__, detail=error)
             self._send_json({"error": str(error)}, HTTPStatus.INTERNAL_SERVER_ERROR)
 
     def _read_body(self) -> dict[str, Any]:
@@ -1107,8 +1141,13 @@ def _open_with_default_app(path: Path) -> None:
 
 
 def run(config: dict[str, Any], root: Path) -> None:
+    # Configure before the companion starts, so jobs recovered after a restart are logged too.
+    runtime_dir = (root.resolve() / str(config["runtime_dir"])).resolve()
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    logs.configure(runtime_dir / "companion.log")
     app = TailoringCompanion(config, root)
     server = CompanionServer((config["host"], int(config["port"])), app)
+    event("listening", host=config["host"], port=config["port"], version=__version__, renderer=app.renderer.name)
     print(f"CV Tailor companion listening at http://{config['host']}:{config['port']}")
     print(f"Workspace: {app.root}   Page renderer: {app.renderer.name}")
     print("Open the extension once to pair it with this local companion. Press Ctrl+C to stop.")

@@ -77,6 +77,15 @@ Your workspace holds all personal data (`cv-tailor.json`, `data/`). Keep it outs
 - Autofill never touches passwords, demographic or diversity questions, date of birth, identity numbers or pay, never overwrites a filled field, and never submits.
 - Agents are read-only, have no shell, and are told to read a single input file.
 - A usage-limit error pauses the queue and resumes after the reset rather than failing.
+- The log (`data/runtime/companion.log`, rotated at 1 MB, four files kept) records job ids, states, agent exit codes and timings, never CV text, listings or your answers. Each failed job also keeps its traceback in `companion-error.log` in its job folder.
+
+## Troubleshooting
+
+`GET http://127.0.0.1:8765/health` (no token needed) reports the running version and which page renderer was found. Each log line is `key=value` fields tagged with a job id, so one job's history is a search away:
+
+```bash
+grep "job=20261003-181000-daa27e0e" data/runtime/companion.log
+```
 
 ## Development
 

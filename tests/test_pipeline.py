@@ -173,6 +173,17 @@ class PipelineTests(unittest.TestCase):
         # An empty plan must not replace the reusable plan for this role family.
         self.assertEqual(list((self.root / "data/runtime/templates").glob("*.json")), [])
 
+    def test_a_job_leaves_a_complete_log_trace_without_its_content(self) -> None:
+        with self.assertLogs("cv_tailor", level="INFO") as captured:
+            status = self.run_job()
+        records = [record for record in captured.records if getattr(record, "job", "-") == status["job_id"]]
+        messages = [record.getMessage() for record in records]
+        self.assertTrue(any(m.startswith("event=job_received") for m in messages), messages)
+        self.assertIn("event=agent_done agent=cv-tailor exit_code=0", " | ".join(messages))
+        self.assertTrue(messages[-1].startswith("event=status state=completed stage=complete"), messages[-1])
+        everything = "\n".join(record.getMessage() for record in captured.records)
+        self.assertNotIn("REST APIs", everything)  # the listing's text never reaches the log
+
     # ai_qa_mode: the AI page inspection costs tokens, so by default it runs only when the free checks fail.
 
     def test_ai_qa_is_skipped_when_the_automatic_layout_checks_pass(self) -> None:
