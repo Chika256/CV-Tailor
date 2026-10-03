@@ -41,10 +41,11 @@ def run_agent(
     """Run one OpenCode agent on a job and save its JSON reply as that agent's output file."""
     if agent not in AGENT_FILES:
         raise RuntimeError(f"Unsupported OpenCode agent: {agent}")
-    relative_job_dir = job_dir.relative_to(root)
+    # An absolute path: OpenCode's read tool needs one, and given a relative path the model
+    # sometimes guesses "/data/...", which is outside the workspace and is refused.
     prompt = (
         f"Process CV tailoring job {job_id}. Your complete input is the single file "
-        f"{relative_job_dir / AGENT_FILES[agent][0]}; read only that file. "
+        f"`{job_dir / AGENT_FILES[agent][0]}`; read only that file. "
         "Follow your output contract exactly."
     )
     command = [

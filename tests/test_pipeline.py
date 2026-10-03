@@ -28,7 +28,11 @@ if pwd and os.path.normcase(os.path.realpath(pwd)) != os.path.normcase(os.path.r
     raise SystemExit(4)
 args = sys.argv
 agent = args[args.index("--agent") + 1]
-text = open(re.search(r"file (\S+\.md)", args[2]).group(1).replace("\\", "/"), encoding="utf8").read()
+# Like OpenCode's read tool, accept only an absolute path to the input file.
+path = re.search(r"file `([^`]+\.md)`", args[2]).group(1)
+if not os.path.isabs(path):
+    raise SystemExit(5)
+text = open(path, encoding="utf8").read()
 with open("agents-called.txt", "a") as log:
     log.write(agent + "\n")
 # A usage limit, the way OpenCode reports one: once for "[usage limit]", every time for the long one.
