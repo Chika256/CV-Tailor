@@ -81,10 +81,16 @@ Your workspace holds all personal data (`cv-tailor.json`, `data/`). Keep it outs
 ## Development
 
 ```bash
-python -m unittest discover -s tests -p "test_*.py"
+uv venv && uv pip install -e ".[dev]"
+python -m unittest discover -s tests -p "test_*.py"   # companion
+node --test tests/*.test.mjs                           # extension
+ruff check .
+uvx pre-commit install                                 # lint, file hygiene and secret scan on each commit
 ```
 
-The suite includes an end-to-end run with a stand-in for OpenCode, so it needs neither network nor Word. `tests/smoke_browser_connection.mjs` is a manual check of the real extension in an isolated browser profile: run `node tests/smoke_browser_connection.mjs <path to Chrome or Edge>` with a companion running. Set `CV_TAILOR_PORT` to test a companion on a non-default port; this also exercises the extension's port setting.
+The suite includes an end-to-end run with a stand-in for OpenCode, so it needs neither network nor Word. The LibreOffice render test runs when `soffice` is installed and is skipped otherwise.
+
+CI (`.github/workflows/ci.yml`) runs the tests on Linux, macOS and Windows with Python 3.11 to 3.14, lints with ruff, checks the extension, and renders the sample CV with LibreOffice on Ubuntu. Gitleaks scans the full history on every push and weekly; Dependabot keeps the SHA-pinned actions and Python extras up to date. `tests/smoke_browser_connection.mjs` is a manual check of the real extension in an isolated browser profile: run `node tests/smoke_browser_connection.mjs <path to Chrome or Edge>` with a companion running. Set `CV_TAILOR_PORT` to test a companion on a non-default port; this also exercises the extension's port setting.
 
 Layout: `cv_tailor/` (companion), `extension/` (browser extension), `cv_tailor/templates/` (agent prompts and guardrails copied into each workspace), `docs/` (design notes).
 
