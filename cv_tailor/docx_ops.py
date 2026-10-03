@@ -6,8 +6,11 @@ import os
 import re
 import tempfile
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, TypeGuard
+from typing import Any, TypeGuard, TypeVar
+
+T = TypeVar("T")
 
 PARAGRAPH_ID = re.compile(r"^document:p(\d{4})$")
 
@@ -25,8 +28,7 @@ def sha256_file(path: Path) -> str:
 
 
 def read_json(path: Path) -> dict[str, Any]:
-    with path.open("r", encoding="utf-8-sig") as stream:
-        value = json.load(stream)
+    value = _retry_on_windows_lock(lambda: json.loads(path.read_text(encoding="utf-8-sig")))
     if not isinstance(value, dict):
         raise PlanError(f"{path.name} must contain a JSON object")
     return value
@@ -48,17 +50,22 @@ def write_json(path: Path, value: dict[str, Any]) -> None:
         raise
 
 
-def _replace(source: Path, target: Path, attempts: int = 40, delay: float = 0.025) -> None:
-    # Windows refuses to replace a file while another thread has it open, as when the HTTP API reads
-    # a job's status while the worker updates it. Readers finish within milliseconds, so retry.
+def _replace(source: Path, target: Path) -> None:
+    _retry_on_windows_lock(lambda: source.replace(target))
+
+
+def _retry_on_windows_lock(action: Callable[[], T], attempts: int = 40, delay: float = 0.025) -> T:
+    # On Windows the HTTP API reading a job's status and the worker replacing it collide: the
+    # replace fails while the file is open, and opening fails while the file is being replaced.
+    # Both sides hold the file for milliseconds, so retry briefly.
     for attempt in range(attempts):
         try:
-            source.replace(target)
-            return
+            return action()
         except PermissionError:
             if attempt == attempts - 1:
                 raise
             time.sleep(delay)
+    raise AssertionError("unreachable")
 
 
 def validate_tailoring_result(

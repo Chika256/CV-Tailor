@@ -133,6 +133,34 @@ class JsonFileTests(unittest.TestCase):
             self.assertEqual(read_json(path), {"n": 299})
             self.assertEqual([p.name for p in Path(directory).iterdir()], ["status.json"])  # no temp files left
 
+    def test_read_json_survives_a_concurrent_writer(self) -> None:
+        # The other side of the same race: on Windows, opening a file at the moment it is being
+        # replaced fails with "Access is denied", which reached the extension as an HTTP 500.
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "status.json"
+            write_json(path, {"n": 0})
+            stop = threading.Event()
+
+            def write_continuously() -> None:
+                n = 0
+                while not stop.is_set():
+                    n += 1
+                    write_json(path, {"n": n})
+
+            writer = threading.Thread(target=write_continuously)
+            writer.start()
+            errors: list[OSError] = []
+            try:
+                for _ in range(2000):
+                    try:
+                        self.assertIn("n", read_json(path))
+                    except OSError as error:
+                        errors.append(error)
+            finally:
+                stop.set()
+                writer.join()
+            self.assertEqual(errors, [])
+
 
 class QaPlanTests(unittest.TestCase):
     def test_requires_every_page_to_be_inspected(self) -> None:
