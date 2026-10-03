@@ -95,6 +95,9 @@ def validate(config: dict[str, Any], root: Path) -> None:
     for key in ("qa_enabled", "use_templates"):
         if not isinstance(config[key], bool):
             raise ConfigError(f"{key} must be true or false")
+    # Compare resolved paths on both sides: a workspace reached through a symlink (macOS's
+    # /var -> /private/var, for one) must not look like it contains none of its own folders.
+    root = root.resolve()
     for key in ("master_cv", "output_dir", "runtime_dir", "cv_library_dir"):
         resolved = (root / config[key]).resolve()
         if root != resolved and root not in resolved.parents:

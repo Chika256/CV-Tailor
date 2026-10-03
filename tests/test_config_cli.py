@@ -1,6 +1,7 @@
 import contextlib
 import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -37,6 +38,32 @@ class ConfigTests(unittest.TestCase):
             load_config(self.root)
         self.write(opencode_model="provider/model")
         self.assertEqual(load_config(self.root)["port"], 8765)
+
+    def test_workspace_reached_through_a_symlink_is_accepted(self) -> None:
+        real = self.root / "real"
+        real.mkdir()
+        link = self.root / "link"
+        try:
+            link.symlink_to(real, target_is_directory=True)
+        except OSError:
+            if os.name != "nt":
+                raise
+            # Windows needs a privilege for symlinks but not for junctions, which resolve the same way.
+            import _winapi
+
+            _winapi.CreateJunction(str(real), str(link))
+        try:
+            (link / CONFIG_NAME).write_text(json.dumps({"opencode_model": "provider/model"}), encoding="utf-8")
+            self.assertEqual(load_config(link)["master_cv"], "data/master_cv.docx")
+        finally:
+            # Remove the link itself first; older shutil.rmtree versions mishandle junctions.
+            if os.name == "nt":
+                os.rmdir(link)
+            else:
+                link.unlink()
+        self.write(opencode_model="provider/model", output_dir="../real/../../outside")
+        with self.assertRaises(ConfigError):
+            load_config(self.root)
 
     def test_rejects_unknown_keys_public_hosts_and_escaping_paths(self) -> None:
         for bad in ({"typo_setting": 1}, {"host": "0.0.0.0"}, {"output_dir": "../outside"}, {"port": 80},
