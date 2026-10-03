@@ -31,3 +31,6 @@ dist/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Demo and diagram recordings (scripts/demo)
+scripts/demo/out/
