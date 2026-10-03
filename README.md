@@ -29,6 +29,15 @@ LLM-written CVs fail in two ways: they fabricate, and they wreck formatting. Thi
 
 The animation steps through the main scenario of an interactive diagram. **[Open the interactive diagram](https://chika256.github.io/CV-Tailor/architecture.html)** to step through all five scenarios (tailoring a CV, clarification questions, a rejected plan, a layout fix and a cover letter) with the real payloads at each step. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) describes the same flows in text, with each module and the trust boundaries.
 
+When the model gets a plan wrong, code catches it before any file is written:
+
+<a href="https://chika256.github.io/CV-Tailor/architecture.html"><picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/architecture-reject-dark.gif">
+  <img alt="An animation of the Bad plan rejected scenario: the listing goes to the local companion as usual and the plan agent gets its one input file; the plan comes back quoting a paragraph the CV does not contain, inflated with experience the CV never claimed; the rule checks reject it because the original text must match the CV exactly; the job fails with the reason, no copy is made and the master CV's hash is unchanged." src="docs/architecture-reject.gif">
+</picture></a>
+
+The bad plan is illustrative; the companion's response to it is the real one. A replacement that misquotes the CV, names a locked paragraph or runs too long fails the same way.
+
 ## Measured token use
 
 With the default settings, a job whose layout check passes uses one planning run of about **9,500 to 9,800 tokens**. The AI page check and the cover letter run only when needed or asked for.
