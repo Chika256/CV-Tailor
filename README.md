@@ -69,7 +69,7 @@ Your workspace holds all personal data (`cv-tailor.json`, `data/`). Keep it outs
 | `ai_qa_mode` | `on_failure` | `always` to have the AI inspect every PDF |
 | `use_templates` | `true` | Offer the last plan for a similar role as a starting point |
 | `candidate_name` | *(from CV)* | Prefix for output filenames |
-| `port` | `8765` | Loopback only; if you change it, update the extension's `DEFAULT_SERVER` and `host_permissions` |
+| `port` | `8765` | Loopback only; if you change it, set the same port in the extension under **Companion connection** |
 
 ## Safety model
 

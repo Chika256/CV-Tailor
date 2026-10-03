@@ -67,6 +67,18 @@
         </label>
       </details>
 
+      <details id="connection-panel">
+        <summary>Companion connection</summary>
+        <label>
+          Port
+          <input id="companion-port" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5"
+                 aria-describedby="companion-port-hint">
+        </label>
+        <p id="companion-port-hint" class="job-meta">Must match <code>port</code> in your workspace's cv-tailor.json. The companion always runs on 127.0.0.1.</p>
+        <button id="companion-port-save" class="secondary" type="button">Save port</button>
+        <p id="connection-result" class="job-meta" role="status"></p>
+      </details>
+
       <section class="jobs" aria-labelledby="jobs-heading">
         <div class="section-heading">
           <h2 id="jobs-heading">Recent jobs</h2>
@@ -76,6 +88,7 @@
       </section>
     </main>
 
+    <script src="connection.js"></script>
     <script src="popup.js"></script>
     <script src="autofill.js"></script>
   </body>

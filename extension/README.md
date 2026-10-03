@@ -1,6 +1,6 @@
 # CV Tailor Capture
 
-A Chrome/Edge Manifest V3 extension that captures the complete job listing in the active tab and sends it to a local CV Tailor companion at `http://127.0.0.1:8765`.
+A Chrome/Edge Manifest V3 extension that captures the complete job listing in the active tab and sends it to a local CV Tailor companion on `127.0.0.1` (port `8765` by default).
 
 ## Features
 
@@ -15,7 +15,7 @@ A Chrome/Edge Manifest V3 extension that captures the complete job listing in th
 
 ## Requirements
 
-The extension is a capture client. It requires the separate local CV Tailor companion to be running on `127.0.0.1:8765`. The extension does not contain model credentials, modify CV files, or call OpenAI or Anthropic directly.
+The extension is a capture client. It requires the separate local CV Tailor companion to be running on `127.0.0.1`. If the companion uses a port other than `8765`, open **Companion connection** in the popup and enter the same port as `port` in the workspace's `cv-tailor.json`. Changing the port discards the old pairing token and re-pairs with the new companion. The extension does not contain model credentials, modify CV files, or call OpenAI or Anthropic directly.
 
 ## Install For Development
 
@@ -36,7 +36,7 @@ If automatic extraction is incomplete, use **Paste description manually**.
 
 ## Security
 
-- Requests are limited to `http://127.0.0.1:8765/*`.
+- Requests are limited to the loopback address, `http://127.0.0.1/*`. The port is configurable, but the host is not: the companion URL is always built from `127.0.0.1` and a validated port, so the pairing token cannot be sent elsewhere.
 - The Geist typeface (SIL Open Font License, `fonts/OFL.txt`) is bundled in `fonts/`, so the popup makes no requests other than to the local companion.
 - Job endpoints require a locally generated bearer token.
 - Pairing is accepted only from a `chrome-extension://` origin.

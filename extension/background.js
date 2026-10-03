@@ -1,4 +1,5 @@
-const DEFAULT_SERVER = "http://127.0.0.1:8765";
+importScripts("connection.js");
+
 const ALARM_NAME = "cv-tailor-status";
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -26,16 +27,12 @@ async function watchJob(jobId) {
 }
 
 async function pollWatchedJobs() {
-  const stored = await chrome.storage.local.get([
-    "serverUrl",
-    "pairingToken",
-    "watchedJobs",
-  ]);
+  const stored = await chrome.storage.local.get(["pairingToken", "watchedJobs"]);
   if (!stored.pairingToken || !stored.watchedJobs?.length) {
     await chrome.alarms.clear(ALARM_NAME);
     return;
   }
-  const serverUrl = stored.serverUrl || DEFAULT_SERVER;
+  const serverUrl = await getServerUrl();
   const remaining = [];
   let hasWarning = false;
   let hasCompleted = false;
