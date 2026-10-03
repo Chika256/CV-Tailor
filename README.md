@@ -6,6 +6,10 @@ A Chrome/Edge extension captures the listing you have open. A small local compan
 
 > Status: early release (0.1.0). Built with AI assistance and reviewed by its author. See [Limitations](#limitations).
 
+![A real run, step by step: a job listing with the CV Tailor popup open; the job is sent and queued; an AI agent drafts a plan; the popup asks clarification questions and the answer is typed in; the job completes; the change report shows each paragraph before and after, with the reason, and the requirements the CV cannot support.](docs/demo.gif)
+
+A real run on fictional data: the sample CV and `examples/sample_job_partial_fit.txt`, on a fictional job board, through the real extension with `openai/gpt-6-luna`. The plan rewrote two paragraphs, one using the answer typed into the popup, and listed four requirements the CV cannot support. The model asked a second, follow-up round of questions, which is not shown.
+
 ## Why it is built this way
 
 LLM-written CVs fail in two ways: they fabricate, and they wreck formatting. This project makes both hard:
