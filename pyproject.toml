@@ -9,6 +9,7 @@ description = "Local companion that tailors a CV to a job listing without invent
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
+authors = [{ name = "Chika Edaki" }]
 dependencies = []
 
 [project.optional-dependencies]
