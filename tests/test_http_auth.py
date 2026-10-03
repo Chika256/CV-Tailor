@@ -11,7 +11,7 @@ from unittest.mock import Mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from cv_tailor import __version__
-from cv_tailor.server import CompanionHandler
+from cv_tailor.api import CompanionHandler
 
 
 class CompanionHttpAuthTests(unittest.TestCase):

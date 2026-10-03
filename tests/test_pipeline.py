@@ -15,10 +15,10 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from cv_tailor.cli import main
+from cv_tailor.companion import TailoringCompanion
 from cv_tailor.config import CONFIG_NAME, load_config
 from cv_tailor.docx_io import extract_cv
 from cv_tailor.render import Layout, Renderer
-from cv_tailor.server import TailoringCompanion
 
 FAKE_AGENT = r'''
 import json, os, re, sys

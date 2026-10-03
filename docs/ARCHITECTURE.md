@@ -5,7 +5,13 @@
 | Part | Responsibility |
 | --- | --- |
 | `extension/` | Captures the listing, shows job status, autofills forms, opens results. Talks only to the companion on `127.0.0.1`. |
-| `cv_tailor/server.py` | HTTP API, job queue, orchestration, usage-limit handling. One worker thread. |
+| `cv_tailor/server.py` | Entry point for `cv-tailor serve`: configures logging, starts the companion and the HTTP API. |
+| `cv_tailor/api.py` | Loopback HTTP API for the extension: pairing, bearer-token auth, CORS and routes. |
+| `cv_tailor/companion.py` | Job queue and its single worker thread, the tailoring pipeline, usage-limit pauses. |
+| `cv_tailor/agents.py` | Runs OpenCode agents: builds the command, runs the process, detects usage limits, parses the JSON reply. |
+| `cv_tailor/intake.py` | Validates a listing submitted by the extension before it becomes a job. |
+| `cv_tailor/reports.py` | Writes each job's before/after report; reads the clarification questions saved with a job. |
+| `cv_tailor/logs.py` | One-line `key=value` log events tagged with the job being processed. |
 | `cv_tailor/docx_io.py` | Reads and edits DOCX paragraphs with the standard library. Copies every other package part byte for byte. |
 | `cv_tailor/docx_ops.py` | Validates tailoring plans and QA results; JSON helpers. |
 | `cv_tailor/prep.py` | Builds each agent's single input file, cleans listings, fingerprints jobs, scores keyword fit, checks layout, writes cover-letter DOCX. |
