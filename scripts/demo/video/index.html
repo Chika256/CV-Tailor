@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CV Tailor demo</title>
+<!-- Rendered frame by frame by scripts/demo/render_video.mjs: window.renderFrame(n) draws frame n.
+     Colours, fonts and sizes come from theme.js through the custom properties set in demo.js. -->
+<style>
+  @font-face { font-family: "Geist"; font-weight: 400 600; src: url("../../../extension/fonts/Geist-latin.woff2") format("woff2"); }
+  @font-face { font-family: "Geist"; font-weight: 400 600; src: url("../../../extension/fonts/Geist-latin-ext.woff2") format("woff2");
+    unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  html, body { margin: 0; background: var(--bg); overflow: hidden; }
+  #stage { position: relative; width: var(--width); height: var(--height); overflow: hidden;
+    font-family: var(--font-body); color: var(--text); -webkit-font-smoothing: antialiased; }
+  .layer, .abs { position: absolute; }
+  .layer { inset: 0; pointer-events: none; }
+  .fill { position: absolute; inset: 0; }
+
+  /* 1. Background mesh */
+  #bg { background: var(--bg); }
+  .blob { position: absolute; border-radius: 50%; }
+  #blob-a { width: 1100px; height: 1100px; left: -380px; top: -520px; filter: blur(40px);
+    background: radial-gradient(circle, color-mix(in srgb, var(--primary) 22%, transparent), transparent 62%); }
+  #blob-b { width: 900px; height: 900px; right: -320px; bottom: -480px; filter: blur(60px);
+    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 14%, transparent), transparent 64%); }
+
+  /* 2. Assets: the real captures */
+  .card { border-radius: 14px; overflow: hidden; box-shadow: 0 30px 70px -20px var(--shadow), 0 0 0 1px var(--rule); }
+  .card img { display: block; }
+  #page { width: 521px; height: 471px; }
+  #page img { width: 521px; height: 471px; object-fit: cover; object-position: 0 0; }
+  #popup { width: 420px; height: 514px; background: var(--paper); }
+  #popup img { position: absolute; left: 0; top: 0; }
+
+  /* 3. Graphics and type */
+  #ring { border: 2px solid var(--primary); border-radius: 10px;
+    box-shadow: 0 0 22px color-mix(in srgb, var(--primary) 45%, transparent), inset 0 0 0 1px rgba(255,255,255,0.4); }
+  .label { font: 500 14px/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim); }
+  .title { font: 600 40px/1.12 var(--font-display); letter-spacing: -0.025em; }
+  .title .w, .hook-line .w { display: inline-block; white-space: pre; }
+  .sub { font: 400 19px/1.45 var(--font-body); color: var(--text-dim); }
+  #caption { left: 64px; width: 410px; }
+  #hook { left: 96px; top: 250px; width: 1090px; }
+  .pill { display: inline-flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 999px;
+    background: var(--bg-alt); box-shadow: 0 0 0 1px var(--rule); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); }
+  .hook-line { font: 600 60px/1.08 var(--font-display); letter-spacing: -0.03em; }
+  .hook-line.dim { color: var(--text-dim); }
+  .hero-word { color: var(--primary); text-shadow: 0 0 40px color-mix(in srgb, var(--primary) 40%, transparent); }
+  .code { width: 452px; padding: 18px 20px; border-radius: 12px; background: var(--bg-alt);
+    box-shadow: 0 24px 60px -18px var(--shadow), 0 0 0 1px var(--rule); font: 400 14px/1.6 var(--font-mono); }
+  .code .line { white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+  .code .key { color: var(--text-dim); }
+  .checks { margin-top: 30px; display: flex; flex-direction: column; gap: 16px; }
+  .check { display: flex; gap: 14px; align-items: flex-start; font: 400 19px/1.35 var(--font-body); }
+  .check svg { flex: none; margin-top: 1px; }
+  .report { box-sizing: border-box; width: 716px; padding: 26px 30px; border-radius: 16px; background: var(--surface);
+    box-shadow: 0 30px 70px -20px var(--shadow), 0 0 0 1px var(--rule); }
+  .report .head { display: flex; justify-content: space-between; align-items: baseline; }
+  .report .tag { font: 600 13px/1 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; }
+  .report .before { margin-top: 10px; font: 400 18px/1.45 var(--font-body); color: var(--text-dim); position: relative; }
+  .report .after { margin-top: 10px; font: 500 20px/1.42 var(--font-body); }
+  .report .after .w { display: inline-block; white-space: pre; }
+  .report .why { margin-top: 12px; font: 400 15px/1.45 var(--font-body); color: var(--text-dim); }
+  .report .rule { height: 1px; background: var(--rule); margin: 20px 0 16px; }
+  .report .gap { display: flex; gap: 12px; align-items: flex-start; margin-top: 10px; font: 400 16px/1.4 var(--font-body); }
+  .strike { position: absolute; left: 0; height: 2px; background: var(--text-dim); transform-origin: 0 50%; }
+  .cta-install { font: 400 20px/1 var(--font-mono); padding: 18px 24px; border-radius: 12px; background: var(--bg-alt);
+    box-shadow: 0 0 0 1px var(--rule); display: inline-block; }
+
+  /* 4. Grade, 5. grain and vignette */
+  #grade-tint { background: var(--primary); mix-blend-mode: soft-light; opacity: 0.06; }
+  #grade-fall { background: linear-gradient(180deg, rgba(0,0,0,0.10), transparent 26%, transparent 74%, rgba(0,0,0,0.22)); }
+  #grain { opacity: 0.05; mix-blend-mode: overlay; background-size: 220px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='7'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  #vignette { background: radial-gradient(ellipse at center, transparent 66%, rgba(0,0,0,0.24) 100%); }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script type="module" src="demo.js"></script>
+</body>
+</html>

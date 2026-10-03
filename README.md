@@ -6,9 +6,9 @@ A Chrome/Edge extension captures the listing you have open. A small local compan
 
 > Status: early release (0.1.0). Built with AI assistance and reviewed by its author. See [Limitations](#limitations).
 
-![A real run, step by step: a job listing with the CV Tailor popup open; the job is sent and queued; an AI agent drafts a plan; the popup asks clarification questions and the answer is typed in; the job completes; the change report shows each paragraph before and after, with the reason, and the requirements the CV cannot support.](docs/demo.gif)
+![A walkthrough of a real run in five steps: a job listing is sent from the CV Tailor popup to the companion; an AI agent drafts a plan, shown as the JSON it returns, while the popup shows the job running; the popup asks clarification questions and the answer is typed in; code checks every edit against the real CV and the job completes; the change report shows the profile paragraph before and after, the reason, and the requirements the CV cannot support. It ends on: The model proposes. Code decides.](docs/demo.webp)
 
-A real run on fictional data: the sample CV and `examples/sample_job_partial_fit.txt`, on a fictional job board, through the real extension with `openai/gpt-6-luna`. The plan rewrote two paragraphs, one using the answer typed into the popup, and listed four requirements the CV cannot support. The model asked a second, follow-up round of questions, which is not shown.
+Made from a real run on fictional data: the sample CV and `examples/sample_job_partial_fit.txt`, on a fictional job board, through the real extension with `openai/gpt-6-luna`. The popup screens and the plan, change and unsupported requirements shown are that run's own. The plan rewrote two paragraphs, one using the answer typed into the popup, and listed three requirements the CV cannot support. The model asked two follow-up rounds of questions, which are not shown. [scripts/demo](scripts/demo/README.md) re-creates it.
 
 ## Why it is built this way
 
