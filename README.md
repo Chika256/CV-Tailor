@@ -104,6 +104,7 @@ uv venv && uv pip install -e ".[dev]"
 python -m unittest discover -s tests -p "test_*.py"   # companion
 node --test tests/*.test.mjs                           # extension
 ruff check .
+python -m mypy                                         # strict type check
 uvx pre-commit install                                 # lint, file hygiene and secret scan on each commit
 ```
 
