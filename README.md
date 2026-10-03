@@ -84,7 +84,7 @@ Your workspace holds all personal data (`cv-tailor.json`, `data/`). Keep it outs
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
-The suite includes an end-to-end run with a stand-in for OpenCode, so it needs neither network nor Word. `tests/smoke_browser_connection.mjs` is a manual check of the real extension in an isolated browser profile.
+The suite includes an end-to-end run with a stand-in for OpenCode, so it needs neither network nor Word. `tests/smoke_browser_connection.mjs` is a manual check of the real extension in an isolated browser profile: run `node tests/smoke_browser_connection.mjs <path to Chrome or Edge>` with a companion running. Set `CV_TAILOR_PORT` to test a companion on a non-default port; this also exercises the extension's port setting.
 
 Layout: `cv_tailor/` (companion), `extension/` (browser extension), `cv_tailor/templates/` (agent prompts and guardrails copied into each workspace), `docs/` (design notes).
 
