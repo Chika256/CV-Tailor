@@ -91,6 +91,14 @@ class CliTests(unittest.TestCase):
                 main(["init", str(root)])
             self.assertEqual(load_config(root)["opencode_model"], "other/model")
 
+    def test_agent_prompts_do_not_assume_a_workspace_layout(self) -> None:
+        # runtime_dir and the other data folders are configurable; the companion passes exact paths.
+        templates = Path(__file__).resolve().parents[1] / "cv_tailor" / "templates"
+        for prompt in templates.rglob("*.md"):
+            text = prompt.read_text(encoding="utf-8")
+            for folder in ("runtime/", "data/", "output/", "cv_library"):
+                self.assertFalse(folder in text, f"{prompt.name} hardcodes {folder}")
+
     def test_renderer_selection_validates_names(self) -> None:
         self.assertEqual(select_renderer("none").name, "none")
         with self.assertRaises(ValueError):
