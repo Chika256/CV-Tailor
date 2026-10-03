@@ -1,8 +1,8 @@
 # Architecture
 
 <a href="architecture.html"><picture>
-  <source media="(prefers-color-scheme: dark)" srcset="architecture-dark.png">
-  <img alt="The interactive architecture diagram on step 4 of Tailor a CV: the local companion sits in the centre with the browser extension, knowledge base, plan agent, AI page check, rule checks, CV files, page renderer and cover-letter agent around it, and the side panel shows the plan being checked against the real CV." src="architecture.png">
+  <source media="(prefers-color-scheme: dark)" srcset="architecture-dark.gif">
+  <img alt="An animation of the interactive architecture diagram stepping through Tailor a CV: the listing goes from the browser extension to the local companion, which sends one input file to the plan agent, gets a JSON plan back, checks it against the real CV, applies it to a copy, renders the copy, runs the free layout checks and returns the report to the extension. The side panel shows the real payload at each step." src="architecture.gif">
 </picture></a>
 
 Open [`architecture.html`](architecture.html) in a browser for the interactive version: pick a scenario, step through it, and see the real payload at each step. The flows below describe the same scenarios in text.

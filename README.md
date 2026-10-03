@@ -23,11 +23,11 @@ LLM-written CVs fail in two ways: they fabricate, and they wreck formatting. Thi
 ## How it works
 
 <a href="docs/architecture.html"><picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/architecture-dark.png">
-  <img alt="The interactive architecture diagram on step 4 of Tailor a CV: the local companion sits in the centre with the browser extension, knowledge base, plan agent, AI page check, rule checks, CV files, page renderer and cover-letter agent around it, and the side panel shows the plan being checked against the real CV." src="docs/architecture.png">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/architecture-dark.gif">
+  <img alt="An animation of the interactive architecture diagram stepping through Tailor a CV: the listing goes from the browser extension to the local companion, which sends one input file to the plan agent, gets a JSON plan back, checks it against the real CV, applies it to a copy, renders the copy, runs the free layout checks and returns the report to the extension. The side panel shows the real payload at each step." src="docs/architecture.gif">
 </picture></a>
 
-The picture is a still of an interactive diagram. Open [`docs/architecture.html`](docs/architecture.html) from a clone in your browser to step through five scenarios (tailoring a CV, clarification questions, a rejected plan, a layout fix and a cover letter) with the real payloads at each step. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) describes the same flows in text, with each module and the trust boundaries.
+The animation steps through the main scenario of an interactive diagram. Open [`docs/architecture.html`](docs/architecture.html) from a clone in your browser to step through five scenarios (tailoring a CV, clarification questions, a rejected plan, a layout fix and a cover letter) with the real payloads at each step. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) describes the same flows in text, with each module and the trust boundaries.
 
 ## Measured token use
 
