@@ -510,11 +510,15 @@ class TailoringCompanion:
                 qa_state = "completed_with_warning"
                 qa_message = f"Tailored CV created, but automated visual QA failed: {error}"
 
+        if not result.get("replacements") and qa_state == "completed":
+            qa_message = "No changes recommended: your CV already fits this listing. A copy was saved for it."
         report_path = job_dir / "application_report.md"
         self._write_report(report_path, job, result, job_dir)
         self._assert_master_unchanged(master_hash)
         family = role_family(str(job.get("title", "")))
-        self._save_template(family, job, result, master_hash)
+        # An empty plan says nothing reusable; keep the previous plan for this role family instead.
+        if result.get("replacements"):
+            self._save_template(family, job, result, master_hash)
         self.knowledge.log_application(
             job_id,
             str(job.get("company", "")),
@@ -811,6 +815,7 @@ class TailoringCompanion:
                     "",
                 )
             ],
+            *([] if result.get("replacements") else ["- None. See the change summary for why.", ""]),
             "## Visual QA",
             f"- Application ready: {qa.get('application_ready', 'not verified')}",
             *[f"- {item}" for item in qa.get("issues", []) if isinstance(item, str)],

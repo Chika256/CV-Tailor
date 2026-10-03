@@ -42,6 +42,22 @@ class TailoringPlanTests(unittest.TestCase):
         }
         self.assertEqual(validate_tailoring_result(plan, self.cv), plan)
 
+    def test_accepts_a_plan_with_no_changes_only_when_it_says_why(self) -> None:
+        plan = {
+            "schema_version": 1,
+            "status": "ready",
+            "replacements": [],
+            "change_summary": ["No changes: the CV already presents the relevant evidence."],
+            "unsupported_requirements": [],
+            "recommendations": [],
+        }
+        self.assertIs(validate_tailoring_result(plan, self.cv), plan)
+        for missing in ([], None):
+            with self.assertRaisesRegex(PlanError, "explain why"):
+                validate_tailoring_result({**plan, "change_summary": missing}, self.cv)
+        with self.assertRaisesRegex(PlanError, "replacements list"):
+            validate_tailoring_result({**plan, "replacements": None}, self.cv)
+
     def test_accepts_clarification_batch(self) -> None:
         result = {
             "schema_version": 1,

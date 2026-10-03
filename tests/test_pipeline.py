@@ -27,7 +27,10 @@ if pwd and os.path.normcase(os.path.realpath(pwd)) != os.path.normcase(os.path.r
 args = sys.argv
 agent = args[args.index("--agent") + 1]
 text = open(re.search(r"file (\S+\.md)", args[2]).group(1).replace("\\", "/"), encoding="utf8").read()
-if agent == "cv-tailor":
+if agent == "cv-tailor" and "[no changes]" in text:
+    out = {"schema_version": 1, "status": "ready", "job": {"title": "T", "company": "C"}, "replacements": [],
+           "change_summary": ["Already fits."], "unsupported_requirements": [], "recommendations": []}
+elif agent == "cv-tailor":
     m = re.search(r"^(document:p\d{4}) \[Eb\] (.+)$", text, re.M)
     out = {"schema_version": 1, "status": "ready", "job": {"title": "T", "company": "C"},
            "replacements": [{"paragraph_id": m.group(1), "original_text": m.group(2),
@@ -99,6 +102,20 @@ class PipelineTests(unittest.TestCase):
         letter = self.app.get_job(job["job_id"])
         self.assertEqual(letter["letter_state"], "completed", letter.get("letter_message"))
         self.assertTrue((self.root / letter["letter_path"]).is_file())
+
+    def test_a_plan_with_no_changes_completes_with_an_unchanged_copy(self) -> None:
+        job = self.app.create_job({**JOB, "description": JOB["description"] + " [no changes]"})
+        self.app.work_queue.join()
+        status = self.app.get_job(job["job_id"])
+        self.assertEqual(status["state"], "completed", status.get("message"))
+        self.assertIn("No changes recommended", status["message"])
+        output = extract_cv(self.root / status["output_path"], "", None)["paragraphs"]
+        master = extract_cv(self.root / "data/master_cv.docx", "", None)["paragraphs"]
+        self.assertEqual([p["text"] for p in output], [p["text"] for p in master])
+        report = (self.root / status["report_path"]).read_text(encoding="utf-8")
+        self.assertIn("- None. See the change summary for why.", report)
+        # An empty plan must not replace the reusable plan for this role family.
+        self.assertEqual(list((self.root / "data/runtime/templates").glob("*.json")), [])
 
 
 if __name__ == "__main__":

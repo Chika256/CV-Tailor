@@ -56,6 +56,8 @@ Create paragraph replacements rather than a rebuilt CV. This preserves the origi
 
 Only use paragraphs whose `editable` field is `true` and whose id starts with `document:` (marked `[E]`). Preserve the paragraph's function: headings remain headings, role titles remain role titles, dates remain dates, and bullets remain bullets. Do not add newline characters. Keep replacement text close to the original length and concise enough for the existing page layout.
 
+Do not change a paragraph just to show activity. If the CV already presents the strongest truthful evidence for this job, return `"replacements": []` and say why in `change_summary`; the companion requires that explanation for an empty plan.
+
 Company research: when the job text gives too little context about the employer or programme to write a role-focused profile, you may do one or two quick searches of authoritative sources (the employer's own site first). Skip research when the job text is sufficient, to save usage. Use research only to understand what the role needs; never add unsupported company-specific claims or facts about the candidate.
 
 Return this exact ready schema as your final response:

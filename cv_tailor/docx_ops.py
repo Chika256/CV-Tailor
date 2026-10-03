@@ -69,8 +69,12 @@ def validate_tailoring_result(
         if isinstance(item, dict) and item.get("editable") is True
     }
     replacements = result.get("replacements")
-    if not isinstance(replacements, list) or not replacements:
-        raise PlanError("A ready result must contain at least one replacement")
+    if not isinstance(replacements, list):
+        raise PlanError("A ready result must contain a replacements list")
+    # No replacements is a legitimate answer when the CV already fits, but only with a stated
+    # reason, so a malformed or truncated response cannot pass as "no changes needed".
+    if not replacements and not result.get("change_summary"):
+        raise PlanError("A ready result with no replacements must explain why in change_summary")
     if len(replacements) > 40:
         raise PlanError("A tailoring plan may contain at most 40 replacements")
 
