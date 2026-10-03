@@ -41,7 +41,11 @@ STOPWORDS = frozenset(
     desirable essential preferred similar related relevant other every many several multiple range variety
     tool tools listing listings posting description things way ways environment culture mission values impact
     place home hours week month level entry mindset attitude passion exposure familiarity familiar
-    proficiency proficient hands through changes""".split()
+    proficiency proficient hands through changes another before again already always often both either
+    even still very much only together around between during under until whether though although
+    understand rely reach add catch caught fix fail become allow enable start stay feel seem mean
+    bad accurate simple easy hard right wrong important useful early late morning afternoon daily weekly
+    today tomorrow""".split()
 )
 FAMILIES = (
     ("qa", ("qa", "test", "quality assurance", "sdet")),

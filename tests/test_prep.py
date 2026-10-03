@@ -51,6 +51,18 @@ class PrepTests(unittest.TestCase):
         fit = fit_score(listing, "Wrote tests.", title="Graduate Software Engineer")
         self.assertEqual(fit["missing"], ["logistics", "dashboard"])
 
+    def test_fit_score_does_not_report_everyday_words_as_missing(self) -> None:
+        listing = (
+            "Northwind helps retailers understand their sales, and analysts rely on the warehouse every morning.\n"
+            "PostgreSQL or another relational database. Add tests so bad records are caught before they reach a"
+            " dashboard."
+        )
+        fit = fit_score(listing, "PostgreSQL", ignore="Northwind")
+        self.assertEqual(
+            fit["missing"],
+            ["retailers", "sales", "analysts", "warehouse", "relational", "database", "tests", "records", "dashboard"],
+        )
+
     def test_fit_score_matches_inflections_and_reports_the_listing_wording(self) -> None:
         fit = fit_score("testing testing reviews deployments kafka", "Wrote unit tests and did code review.")
         self.assertNotIn("testing", fit["missing"])
