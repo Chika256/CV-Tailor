@@ -1,11 +1,11 @@
 # Architecture
 
-<a href="architecture.html"><picture>
+<a href="https://chika256.github.io/CV-Tailor/architecture.html"><picture>
   <source media="(prefers-color-scheme: dark)" srcset="architecture-dark.gif">
   <img alt="An animation of the interactive architecture diagram stepping through Tailor a CV: the listing goes from the browser extension to the local companion, which sends one input file to the plan agent, gets a JSON plan back, checks it against the real CV, applies it to a copy, renders the copy, runs the free layout checks and returns the report to the extension. The side panel shows the real payload at each step." src="architecture.gif">
 </picture></a>
 
-Open [`architecture.html`](architecture.html) in a browser for the interactive version: pick a scenario, step through it, and see the real payload at each step. The flows below describe the same scenarios in text.
+**[Open the interactive version](https://chika256.github.io/CV-Tailor/architecture.html)**, served by GitHub Pages from [`architecture.html`](architecture.html) in this folder: pick a scenario, step through it, and see the real payload at each step. The flows below describe the same scenarios in text.
 
 ## Components
 
