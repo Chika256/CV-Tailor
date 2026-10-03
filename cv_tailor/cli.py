@@ -8,6 +8,7 @@ import shutil
 import socket
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 from . import __version__
@@ -134,8 +135,9 @@ def main(argv: list[str] | None = None) -> int:
     doctor.set_defaults(handler=cmd_doctor)
 
     args = parser.parse_args(argv)
+    handler: Callable[[argparse.Namespace], int] = args.handler
     try:
-        return args.handler(args)
+        return handler(args)
     except ConfigError as error:
         print(f"error: {error}", file=sys.stderr)
         return 2

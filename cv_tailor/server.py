@@ -18,7 +18,7 @@ from datetime import UTC, datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.parse import parse_qs, urlparse
 
 from . import docx_io
@@ -41,7 +41,7 @@ from .prep import (
     validate_letter,
     write_cover_letter_docx,
 )
-from .render import RenderError, select_renderer
+from .render import Renderer, RenderError, select_renderer
 
 SAFE_FILENAME = re.compile(r"[^A-Za-z0-9]+")
 MAX_PAUSE_SECONDS = 6 * 3600
@@ -67,12 +67,12 @@ class TailoringCompanion:
     def __init__(self, config: dict[str, Any], root: Path) -> None:
         self.config = config
         self.root = root.resolve()
-        self.master_cv = (self.root / config["master_cv"]).resolve()
-        self.cv_library = (self.root / config["cv_library_dir"]).resolve()
+        self.master_cv = self._workspace_path(config["master_cv"])
+        self.cv_library = self._workspace_path(config["cv_library_dir"])
         self.cv_library.mkdir(parents=True, exist_ok=True)
         self.renderer = self._select_renderer(config)
-        self.output_dir = (self.root / config["output_dir"]).resolve()
-        self.runtime_dir = (self.root / config["runtime_dir"]).resolve()
+        self.output_dir = self._workspace_path(config["output_dir"])
+        self.runtime_dir = self._workspace_path(config["runtime_dir"])
         for label, path in (("output_dir", self.output_dir), ("runtime_dir", self.runtime_dir)):
             if self.root not in path.parents:
                 raise RuntimeError(f"{label} must remain inside the workspace")
@@ -96,6 +96,9 @@ class TailoringCompanion:
         self.worker = threading.Thread(target=self._worker_loop, daemon=True)
         self.worker.start()
         self._recover_jobs()
+
+    def _workspace_path(self, relative: str) -> Path:
+        return (self.root / str(relative)).resolve()
 
     @property
     def token(self) -> str:
@@ -138,7 +141,7 @@ class TailoringCompanion:
         self.knowledge.import_cvs(self.cv_library, exclude={self.master_cv}, require_cv_in_name=False)
 
     @staticmethod
-    def _select_renderer(config: dict[str, Any]):
+    def _select_renderer(config: dict[str, Any]) -> Renderer:
         try:
             return select_renderer(str(config.get("render_backend", "auto")))
         except RenderError as error:
@@ -237,7 +240,7 @@ class TailoringCompanion:
         _open_with_default_app(target)
         return {"opened": target.name}
 
-    def submit_answers(self, job_id: str, answers: str) -> dict[str, Any]:
+    def submit_answers(self, job_id: str, answers: object) -> dict[str, Any]:
         job_dir = self._job_dir(job_id)
         status = read_json(job_dir / "status.json")
         if status.get("state") != "needs_clarification":
@@ -827,12 +830,20 @@ class TailoringCompanion:
         path.write_text("\n".join(sections), encoding="utf-8")
 
 
+class CompanionServer(ThreadingHTTPServer):
+    """HTTP server that carries the companion, so request handlers can reach it."""
+
+    def __init__(self, address: tuple[str, int], app: TailoringCompanion) -> None:
+        super().__init__(address, CompanionHandler)
+        self.app = app
+
+
 class CompanionHandler(BaseHTTPRequestHandler):
     server_version = "CVTailorCompanion/1.0"
 
     @property
     def app(self) -> TailoringCompanion:
-        return self.server.app  # type: ignore[attr-defined]
+        return cast(CompanionServer, self.server).app
 
     def do_OPTIONS(self) -> None:
         if not self._extension_origin():
@@ -1083,7 +1094,7 @@ def _parse_opencode_json(output: str) -> dict[str, Any]:
 
 def _open_with_default_app(path: Path) -> None:
     if sys.platform == "win32":
-        os.startfile(path)  # type: ignore[attr-defined]
+        os.startfile(path)
     elif sys.platform == "darwin":
         subprocess.Popen(["open", str(path)])
     else:
@@ -1092,8 +1103,7 @@ def _open_with_default_app(path: Path) -> None:
 
 def run(config: dict[str, Any], root: Path) -> None:
     app = TailoringCompanion(config, root)
-    server = ThreadingHTTPServer((config["host"], int(config["port"])), CompanionHandler)
-    server.app = app  # type: ignore[attr-defined]
+    server = CompanionServer((config["host"], int(config["port"])), app)
     print(f"CV Tailor companion listening at http://{config['host']}:{config['port']}")
     print(f"Workspace: {app.root}   Page renderer: {app.renderer.name}")
     print("Open the extension once to pair it with this local companion. Press Ctrl+C to stop.")

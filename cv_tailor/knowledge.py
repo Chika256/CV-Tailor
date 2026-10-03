@@ -17,6 +17,7 @@ import re
 import sqlite3
 import threading
 import zipfile
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -89,7 +90,7 @@ class KnowledgeBase:
             connection.executescript(SCHEMA)
 
     @contextmanager
-    def _connect(self):
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         # sqlite3's own context manager only commits; close explicitly so Windows releases the file.
         connection = sqlite3.connect(self.path)
         connection.row_factory = sqlite3.Row
@@ -136,7 +137,7 @@ class KnowledgeBase:
                 )
             except sqlite3.IntegrityError:
                 return None
-            return int(cursor.lastrowid)
+            return cursor.lastrowid  # always set after a successful INSERT
 
     def retire(self, evidence_id: int, superseded_by: int | None = None) -> bool:
         with self.lock, self._connect() as connection:

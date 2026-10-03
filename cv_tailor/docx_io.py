@@ -82,7 +82,9 @@ def extract_cv(path: Path, sha256: str, page_count: int | None) -> dict[str, Any
         text = _paragraph_text(block)
         style = STYLE.search(block)
         numbering = NUMBERING.search(block)
-        is_list = bool(numbering) and (NUM_ID.search(numbering.group(0)) or [None, "1"])[1] != "0"
+        # A numbered paragraph is a list item unless its numId is 0 ("numbering removed").
+        num_id = NUM_ID.search(numbering.group(0)) if numbering else None
+        is_list = numbering is not None and (num_id.group(1) if num_id else "1") != "0"
         paragraphs.append(
             {
                 "id": f"document:p{index:04d}",

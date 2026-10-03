@@ -27,6 +27,11 @@ jobs:
           activate-environment: true
       - run: uv pip install -e ".[dev]"
       - run: ruff check --output-format=github .
+      - name: Type-check (mypy --strict, all three platforms)
+        run: |
+          for platform in linux darwin win32; do
+            mypy --platform "$platform"
+          done
 
   test:
     name: Tests (${{ matrix.os }}, Python ${{ matrix.python }})

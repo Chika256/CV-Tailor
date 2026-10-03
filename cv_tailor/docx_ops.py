@@ -4,7 +4,7 @@ import hashlib
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
 PARAGRAPH_ID = re.compile(r"^document:p(\d{4})$")
 
@@ -94,7 +94,7 @@ def validate_tailoring_result(
         if source is None:
             raise PlanError(f"Paragraph is not editable: {paragraph_id}")
         original = replacement.get("original_text")
-        if original != source.get("text"):
+        if not isinstance(original, str) or original != source.get("text"):
             raise PlanError(f"Original text mismatch for {paragraph_id}")
         new_text = replacement.get("new_text")
         if not _plain_text(new_text, 1600):
@@ -148,5 +148,5 @@ def validate_qa_result(
     return qa
 
 
-def _plain_text(value: Any, maximum_length: int) -> bool:
+def _plain_text(value: Any, maximum_length: int) -> TypeGuard[str]:
     return isinstance(value, str) and bool(value.strip()) and len(value) <= maximum_length
