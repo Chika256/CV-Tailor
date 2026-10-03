@@ -549,7 +549,10 @@ class TailoringCompanion:
         evidence = " ".join(str(p.get("text", "")) for p in cv_document["paragraphs"])
         everything = self.knowledge.snapshot(str(job["description"]), 100000)
         evidence += " " + json.dumps(everything, ensure_ascii=False)
-        fit = fit_score(str(job["description"]), evidence, ignore=f"{job.get('company', '')} {job.get('title', '')}")
+        fit = fit_score(
+            str(job["description"]), evidence,
+            ignore=f"{job.get('company', '')} {job.get('title', '')}", title=str(job.get("title", "")),
+        )
         self._update_status(job_id, fit_checked=True, fit_score=fit["score"], missing_keywords=fit["missing"])
         threshold = int(self.config.get("min_fit_score", 0))
         if threshold and fit["score"] < threshold and not status.get("confirmed"):

@@ -43,6 +43,20 @@ class PrepTests(unittest.TestCase):
         self.assertEqual(fit["score"], 33)
         self.assertEqual(set(fit["missing"]), {"kubernetes", "terraform"})
 
+    def test_fit_score_ignores_filler_and_the_heading_line(self) -> None:
+        listing = (
+            "Graduate Software Engineer - Example Ltd (fictional listing for trying the tool)\n"
+            "You will write tests and ship changes through a small team that owns a logistics dashboard."
+        )
+        fit = fit_score(listing, "Wrote tests.", title="Graduate Software Engineer")
+        self.assertEqual(fit["missing"], ["logistics", "dashboard"])
+
+    def test_fit_score_matches_inflections_and_reports_the_listing_wording(self) -> None:
+        fit = fit_score("testing testing reviews deployments kafka", "Wrote unit tests and did code review.")
+        self.assertNotIn("testing", fit["missing"])
+        self.assertNotIn("reviews", fit["missing"])
+        self.assertEqual(fit["missing"], ["deployments", "kafka"])
+
     def test_layout_clean_passes(self) -> None:
         layout = {"page_count": 2, "paragraphs": [para(1, 1), para(2, 1, is_list=True), para(3, 2)]}
         self.assertEqual(deterministic_layout_issues(layout, 2), [])

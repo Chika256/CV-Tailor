@@ -30,6 +30,18 @@ STOPWORDS = frozenset(
     across ensure support help make build part just careers career future candidates candidate offering
     receiving top success opportunities apply benefits salary based location hybrid remote office days
     day time people business world industry leading looking seeking""".split()
+) | frozenset(
+    # Everyday verbs, adjectives and job-ad filler that are never skills. Words that can name a
+    # skill or domain on their own (product, design, lead, communication) are deliberately absent.
+    """write writes writing written try tries trying learn learning learned ship ships shipping power powers
+    powering deliver delivering create creating provide providing joining grow growing improve improving keep
+    take taking bring want need needs like love enjoy get give see find think know own owning drive driving
+    small large big clear fast exciting excited passionate curious willing willingness solid nice ideal
+    ideally various varied real key high low wide broad current latest modern first best better plus bonus
+    desirable essential preferred similar related relevant other every many several multiple range variety
+    tool tools listing listings posting description things way ways environment culture mission values impact
+    place home hours week month level entry mindset attitude passion exposure familiarity familiar
+    proficiency proficient hands through changes""".split()
 )
 FAMILIES = (
     ("qa", ("qa", "test", "quality assurance", "sdet")),
@@ -76,22 +88,47 @@ def role_family(title: str) -> str:
 
 
 def _terms(text: str) -> list[str]:
-    return [
-        word.strip(".")
-        for word in re.findall(r"[a-z][a-z0-9+#.]{1,}", text.lower())
-        if word.strip(".") not in STOPWORDS and len(word.strip(".")) > 2
-    ]
+    words = (word.strip(".") for word in re.findall(r"[a-z][a-z0-9+#.]{1,}", text.lower()))
+    # Checking the stem too means one stopword covers its inflections ("owns", "ensures", "joined").
+    return [word for word in words if len(word) > 2 and word not in STOPWORDS and _stem(word) not in STOPWORDS]
 
 
-def fit_score(description: str, evidence_text: str, top: int = 40, ignore: str = "") -> dict[str, Any]:
-    """Share of the job's most repeated terms that appear anywhere in the user's evidence."""
-    skip = set(_terms(ignore))
-    counts = Counter(word for word in _terms(description) if word not in skip)
-    wanted = [word for word, _ in counts.most_common(top)]
+def _without_heading(description: str, title: str) -> str:
+    """Drop a first line that repeats the job title ("Title - Company (...)"); it is not a requirement."""
+    first, _, rest = description.strip().partition("\n")
+    if title.strip() and title.strip().lower() in first.lower():
+        return rest
+    return description
+
+
+def _stem(word: str) -> str:
+    """Light, symmetric normalisation so "testing", "tests" and "tested" all match "test"."""
+    for suffix in ("ing", "ed", "s"):
+        if word.endswith(suffix) and len(word) - len(suffix) >= 3 and not word.endswith("ss"):
+            return word[: -len(suffix)]
+    return word
+
+
+def fit_score(
+    description: str, evidence_text: str, top: int = 40, ignore: str = "", title: str = ""
+) -> dict[str, Any]:
+    """Share of the job's most repeated terms that appear anywhere in the user's evidence.
+
+    Terms are compared by stem; missing terms are reported in the listing's own wording.
+    """
+    skip = {_stem(word) for word in _terms(ignore)}
+    counts: Counter[str] = Counter()
+    wording: dict[str, str] = {}
+    for word in _terms(_without_heading(description, title)):
+        stem = _stem(word)
+        if stem not in skip:
+            counts[stem] += 1
+            wording.setdefault(stem, word)
+    wanted = [stem for stem, _ in counts.most_common(top)]
     if not wanted:
         return {"score": 0, "missing": []}
-    have = set(_terms(evidence_text))
-    missing = [word for word in wanted if word not in have]
+    have = {_stem(word) for word in _terms(evidence_text)}
+    missing = [wording[stem] for stem in wanted if stem not in have]
     return {"score": round(100 * (len(wanted) - len(missing)) / len(wanted)), "missing": missing[:10]}
 
 
