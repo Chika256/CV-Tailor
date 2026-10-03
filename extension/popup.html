@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CV Tailor</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <header>
+      <h1>CV Tailor</h1>
+      <p class="lede">Capture this role and create a protected, tailored copy of your CV.</p>
+    </header>
+
+    <main>
+      <button id="send-job" class="primary" type="button">Send current job</button>
+      <p id="status" class="status" role="status">Checking the local companion...</p>
+
+      <section class="autofill" aria-labelledby="autofill-heading">
+        <h2 id="autofill-heading">Autofill application</h2>
+        <label>
+          CV to attach
+          <select id="autofill-cv"><option value="">Do not attach a CV</option></select>
+        </label>
+        <button id="autofill" class="secondary" type="button">Autofill this page</button>
+        <pre id="autofill-result" class="autofill-result"></pre>
+        <details id="profile-panel">
+          <summary>My details</summary>
+          <div id="profile-form"></div>
+          <button id="profile-save" class="secondary" type="button">Save details</button>
+        </details>
+      </section>
+
+      <details id="manual-panel">
+        <summary>Paste description manually</summary>
+        <label>
+          Job title
+          <input id="manual-title" type="text" maxlength="500">
+        </label>
+        <label>
+          Company
+          <input id="manual-company" type="text" maxlength="500">
+        </label>
+        <label>
+          Complete job description
+          <textarea id="manual-description" rows="9" maxlength="200000"></textarea>
+        </label>
+        <button id="send-manual" class="secondary" type="button">Submit pasted description</button>
+        <p id="manual-result" class="manual-result" role="alert"></p>
+      </details>
+
+      <details id="knowledge-panel">
+        <summary>Knowledge base</summary>
+        <input id="knowledge-search" type="search" placeholder="Search saved answers, notes and CV evidence">
+        <p id="applications-summary" class="job-meta"></p>
+        <p id="knowledge-status" class="job-meta"></p>
+        <div id="knowledge-list" class="job-list"></div>
+        <label>
+          Add or correct a fact
+          <textarea id="knowledge-note" rows="3" maxlength="4000"></textarea>
+        </label>
+        <button id="knowledge-add" class="secondary" type="button">Save fact</button>
+        <button id="knowledge-import-cvs" class="secondary" type="button">Re-scan workspace CVs</button>
+        <label>
+          Import chat export (.json, .txt, .md)
+          <input id="knowledge-import-chat" type="file" accept=".json,.txt,.md">
+        </label>
+      </details>
+
+      <section class="jobs" aria-labelledby="jobs-heading">
+        <div class="section-heading">
+          <h2 id="jobs-heading">Recent jobs</h2>
+          <button id="refresh" class="text-button" type="button">Refresh</button>
+        </div>
+        <div id="job-list" class="job-list"></div>
+      </section>
+    </main>
+
+    <script src="popup.js"></script>
+    <script src="autofill.js"></script>
+  </body>
+</html>

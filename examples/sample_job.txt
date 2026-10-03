@@ -1,0 +1,13 @@
+Graduate Software Engineer - Example Ltd (fictional listing for trying the tool)
+
+About the role
+You will join a small product team building Python services and REST APIs that power a
+logistics dashboard. You will write tests, review code and ship changes through a CI pipeline.
+
+Requirements
+- Experience building web services in Python or Java
+- Solid understanding of testing, Git and Docker
+- Clear written communication and a willingness to learn
+
+Nice to have
+- Exposure to PostgreSQL and GitHub Actions

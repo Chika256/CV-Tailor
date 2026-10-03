@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cv-tailor"
+version = "0.1.0"
+description = "Local companion that tailors a CV to a job listing without inventing experience"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = []
+
+[project.optional-dependencies]
+pdf = ["pypdf>=4"]
+dev = ["ruff>=0.5", "pypdf>=4"]
+
+[project.scripts]
+cv-tailor = "cv_tailor.cli:main"
+
+[tool.setuptools]
+packages = ["cv_tailor"]
+
+[tool.setuptools.package-data]
+cv_tailor = ["templates/*", "templates/agents/*", "resources/*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

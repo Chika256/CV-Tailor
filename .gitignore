@@ -1,0 +1,33 @@
+# Personal data and runtime state: never commit
+data/
+runtime/
+output/
+cv-tailor.json
+profile.json
+knowledge.db
+companion_state.json
+*.docx
+*.pdf
+.env
+
+# Workspace files created by `cv-tailor init` if someone initialises inside the repo
+/.opencode/
+/opencode.json
+/CV_TAILORING_AGENT.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
