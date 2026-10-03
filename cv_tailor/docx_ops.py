@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
+import tempfile
+import time
 from pathlib import Path
 from typing import Any, TypeGuard
 
@@ -30,12 +33,32 @@ def read_json(path: Path) -> dict[str, Any]:
 
 
 def write_json(path: Path, value: dict[str, Any]) -> None:
+    """Write atomically: readers see the old file or the new one, never a partial write."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    with temporary.open("w", encoding="utf-8", newline="\n") as stream:
-        json.dump(value, stream, indent=2, ensure_ascii=True)
-        stream.write("\n")
-    temporary.replace(path)
+    # A unique temporary name, so two threads saving the same file cannot write into one temp file.
+    handle, name = tempfile.mkstemp(dir=path.parent, prefix=f"{path.name}.", suffix=".tmp")
+    temporary = Path(name)
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8", newline="\n") as stream:
+            json.dump(value, stream, indent=2, ensure_ascii=True)
+            stream.write("\n")
+        _replace(temporary, path)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
+
+
+def _replace(source: Path, target: Path, attempts: int = 40, delay: float = 0.025) -> None:
+    # Windows refuses to replace a file while another thread has it open, as when the HTTP API reads
+    # a job's status while the worker updates it. Readers finish within milliseconds, so retry.
+    for attempt in range(attempts):
+        try:
+            source.replace(target)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(delay)
 
 
 def validate_tailoring_result(

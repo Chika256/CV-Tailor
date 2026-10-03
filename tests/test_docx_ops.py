@@ -1,10 +1,13 @@
+import contextlib
 import sys
+import tempfile
+import threading
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from cv_tailor.docx_ops import PlanError, validate_qa_result, validate_tailoring_result
+from cv_tailor.docx_ops import PlanError, read_json, validate_qa_result, validate_tailoring_result, write_json
 
 
 class TailoringPlanTests(unittest.TestCase):
@@ -103,6 +106,32 @@ class TailoringPlanTests(unittest.TestCase):
         }
         with self.assertRaises(PlanError):
             validate_tailoring_result(plan, self.cv)
+
+
+class JsonFileTests(unittest.TestCase):
+    def test_write_json_survives_a_concurrent_reader(self) -> None:
+        # The HTTP API reads a job's status.json while the worker rewrites it; on Windows, replacing a
+        # file that another thread has open fails unless the writer retries.
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "status.json"
+            write_json(path, {"n": 0})
+            stop = threading.Event()
+
+            def read_continuously() -> None:
+                while not stop.is_set():
+                    with contextlib.suppress(OSError):
+                        read_json(path)
+
+            reader = threading.Thread(target=read_continuously)
+            reader.start()
+            try:
+                for n in range(300):
+                    write_json(path, {"n": n})
+            finally:
+                stop.set()
+                reader.join()
+            self.assertEqual(read_json(path), {"n": 299})
+            self.assertEqual([p.name for p in Path(directory).iterdir()], ["status.json"])  # no temp files left
 
 
 class QaPlanTests(unittest.TestCase):
