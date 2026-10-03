@@ -27,17 +27,19 @@ The details, including each module and the trust boundaries, are in [docs/ARCHIT
 
 ## Measured token use
 
-With the default settings, a job whose layout check passes uses one planning run of about **9,500 tokens**. The AI page check and the cover letter run only when needed or asked for.
+With the default settings, a job whose layout check passes uses one planning run of about **9,500 to 9,800 tokens**. The AI page check and the cover letter run only when needed or asked for.
 
-| Agent | Runs | Median tokens | Range | Median time |
-| --- | --- | --- | --- | --- |
-| Planning (`cv-tailor`) | 6 | 9,503 | 9,218–9,545 | 14 s |
-| AI page check (`cv-tailor-qa`) | 5 | 7,150 | 7,047–11,019 | 14 s |
-| Cover letter (`cv-tailor-letter`) | 5 | 6,498 | 6,410–6,526 | 13 s |
+Median tokens per agent run, with the range and the median time:
 
-**Method.** Five jobs were run one after another on 3 October 2026 at commit `398a8a1`, in a fresh workspace from `cv-tailor init --sample`. Each job used the fictional sample CV (17 paragraphs, one page) and `examples/sample_job.txt`. The model was `openai/gpt-6-luna` at variant `medium` through OpenCode, rendering with Word on Windows. `ai_qa_mode` was set to `always` so that every job also measured the page check, and a cover letter was requested for each job. The figures are OpenCode's own token counts for each model call, summed per agent run by `cv-tailor usage`. The total includes cached input; about three quarters of the planning tokens were input the provider served from its prompt cache. The first job asked clarification questions once, so it planned twice. Its answer was stored, and the other four jobs planned once.
+| Agent | Listing the CV already fits | Listing it only partly fits |
+| --- | --- | --- |
+| Planning (`cv-tailor`) | 9,503 (9,218–9,545), 14 s | 9,848 (9,454–9,949), 16 s |
+| AI page check (`cv-tailor-qa`) | 7,150 (7,047–11,019), 14 s | 7,085 (6,958–7,323), 15 s |
+| Cover letter (`cv-tailor-letter`) | 6,498 (6,410–6,526), 13 s | 6,550 (6,527–6,664), 11 s |
 
-**Limits.** All five plans recommended no changes, because the sample CV already covers the sample listing. A plan with edits produces more output tokens. A real CV is longer than the sample, so its input is larger. Run `cv-tailor usage` in your own workspace to see your figures.
+**Method.** Two sets of five jobs were run one after another on 3 October 2026, each in a fresh workspace from `cv-tailor init --sample`, with the fictional sample CV (17 paragraphs, one page). The first set used `examples/sample_job.txt` at commit `398a8a1`; the second used `examples/sample_job_partial_fit.txt` at commit `8783c74`. The model was `openai/gpt-6-luna` at variant `medium` through OpenCode, rendering with Word on Windows. `ai_qa_mode` was set to `always` so that every job also measured the page check, and a cover letter was requested for each job. The figures are OpenCode's own token counts for each model call, summed per agent run by `cv-tailor usage`. The total includes cached input, which the provider served from its prompt cache and which varied from run to run: between about a third and three quarters of each planning run (median 75% in the first set, 37% in the second). In each set, the first job asked clarification questions once, so it planned twice. Its answer was stored, and the other four jobs planned once (six planning runs per set).
+
+**Limits.** Against the first listing, all five plans recommended no changes, because the sample CV already covers it. Against the second, each plan rewrote the profile paragraph and listed two or three requirements the CV cannot support, such as Airflow and dbt, instead of inventing them. A plan with many edits produces more output tokens. A real CV is longer than the sample, so its input is larger. Run `cv-tailor usage` in your own workspace to see your figures.
 
 ## Quick start
 
@@ -51,7 +53,7 @@ cv-tailor doctor                      # checks everything is in place
 cv-tailor serve
 ```
 
-List the models you can use with `opencode models`. `--sample` creates a fictional master CV so you can try the tool; to use your own, replace `data/master_cv.docx`.
+List the models you can use with `opencode models`. `--sample` creates a fictional master CV so you can try the tool; to use your own, replace `data/master_cv.docx`. `examples/` has two fictional listings to paste into a page or send: one the sample CV already fits (no changes needed) and one it only partly fits (real edits, plus requirements it reports as unsupported).
 
 Then load the extension: open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the `extension/` folder. Open a job listing and click **Send current job**.
 

@@ -6,7 +6,7 @@ Thanks for taking a look. Bug reports, fixes and small focused improvements are 
 
 - For anything larger than a bug fix, open an issue first to agree the approach.
 - Security problems go through a private advisory, not an issue: see [SECURITY.md](SECURITY.md).
-- Never put real personal data in the repository, in an issue or in a test: no CVs, answers, job histories or workspace files. Use the fictional sample (`cv-tailor init --sample`, `examples/sample_job.txt`) to reproduce problems.
+- Never put real personal data in the repository, in an issue or in a test: no CVs, answers, job histories or workspace files. Use the fictional sample (`cv-tailor init --sample` and the listings in `examples/`) to reproduce problems.
 
 ## Setting up
 

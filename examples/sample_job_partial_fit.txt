@@ -1,0 +1,23 @@
+Junior Data Engineer - Northwind Analytics (fictional listing for trying the tool)
+
+About the role
+Northwind Analytics helps retailers understand their stock and sales. You will join the data
+platform team, building the pipelines that load sales and inventory data from our partners'
+systems into our warehouse, and keeping that data accurate and on time for the analysts who
+rely on it every morning.
+
+What you will do
+- Write Python and SQL to extract, clean and load data from APIs and databases
+- Model data for reporting and keep tables documented
+- Add data-quality tests so bad records are caught before they reach a dashboard
+- Run and monitor scheduled pipelines, and fix them when they fail
+
+Requirements
+- Python and SQL, ideally with PostgreSQL or another relational database
+- Experience writing automated tests
+- Familiarity with Git and continuous integration
+
+Nice to have
+- Apache Airflow or another workflow scheduler
+- dbt, and data modelling for analytics
+- Docker and a cloud platform such as AWS
