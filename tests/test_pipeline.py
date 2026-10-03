@@ -57,6 +57,10 @@ elif agent == "cv-tailor-qa":
            "notes": ["Inspected by the stand-in."]}
 else:
     raise SystemExit(3)
+# Two model calls, reported the way OpenCode does: 1,000 + 1,500 = 2,500 tokens for every run.
+for tokens in ({"total": 1000, "input": 900, "output": 100, "reasoning": 0, "cache": {"write": 0, "read": 0}},
+               {"total": 1500, "input": 200, "output": 150, "reasoning": 50, "cache": {"write": 0, "read": 1100}}):
+    print(json.dumps({"type": "step_finish", "part": {"type": "step-finish", "tokens": tokens}}))
 print(json.dumps({"type": "text", "part": {"text": json.dumps(out)}}))
 '''
 
@@ -183,6 +187,28 @@ class PipelineTests(unittest.TestCase):
         self.assertTrue(messages[-1].startswith("event=status state=completed stage=complete"), messages[-1])
         everything = "\n".join(record.getMessage() for record in captured.records)
         self.assertNotIn("REST APIs", everything)  # the listing's text never reaches the log
+
+    def test_every_agent_run_records_its_token_usage(self) -> None:
+        self.app.renderer = StubRenderer()
+        self.app.config["ai_qa_mode"] = "always"
+        with self.assertLogs("cv_tailor", level="INFO") as captured:
+            status = self.run_job()
+            self.app.request_cover_letter(status["job_id"])
+            self.app.work_queue.join()
+        job_dir = self.root / "data/runtime/jobs" / status["job_id"]
+        runs = json.loads((job_dir / "usage.json").read_text(encoding="utf-8"))["runs"]
+        self.assertEqual([run["agent"] for run in runs], ["cv-tailor", "cv-tailor-qa", "cv-tailor-letter"])
+        self.assertEqual(runs[0]["model"], "provider/model")
+        self.assertEqual(runs[0]["tokens"], {"input": 1100, "cache_read": 1100, "cache_write": 0, "output": 250,
+                                             "reasoning": 50, "steps": 2, "total": 2500})
+        self.assertIn("event=agent_done agent=cv-tailor exit_code=0 seconds=",
+                      " | ".join(record.getMessage() for record in captured.records))
+        self.assertIn(" tokens=2500 ", " | ".join(record.getMessage() for record in captured.records))
+
+        printed = io.StringIO()
+        with contextlib.redirect_stdout(printed):
+            self.assertEqual(main(["usage", "--workspace", str(self.root)]), 0)
+        self.assertIn("median per job               7,500 tokens over 1 job(s)", printed.getvalue())
 
     # ai_qa_mode: the AI page inspection costs tokens, so by default it runs only when the free checks fail.
 

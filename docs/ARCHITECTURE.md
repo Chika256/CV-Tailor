@@ -11,6 +11,7 @@
 | `cv_tailor/agents.py` | Runs OpenCode agents: builds the command, runs the process, detects usage limits, parses the JSON reply. |
 | `cv_tailor/intake.py` | Validates a listing submitted by the extension before it becomes a job. |
 | `cv_tailor/reports.py` | Writes each job's before/after report; reads the clarification questions saved with a job. |
+| `cv_tailor/usage.py` | Sums the token counts OpenCode reports for each agent run into the job's `usage.json`; `cv-tailor usage` reports them. |
 | `cv_tailor/logs.py` | One-line `key=value` log events tagged with the job being processed. |
 | `cv_tailor/docx_io.py` | Reads and edits DOCX paragraphs with the standard library. Copies every other package part byte for byte. |
 | `cv_tailor/docx_ops.py` | Validates tailoring plans and QA results; JSON helpers. |

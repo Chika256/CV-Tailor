@@ -13,6 +13,7 @@ from typing import Any
 
 from .docx_ops import write_json
 from .logs import event
+from .usage import record_run, tokens_from_output
 
 AGENT_FILES = {
     "cv-tailor": ("input.md", "result.json"),
@@ -67,17 +68,34 @@ def run_agent(
         if attachment.exists():
             command.extend(["--file", str(attachment)])
     timeout = int(config.get("opencode_timeout_seconds", 1200))
-    event("agent_start", agent=agent, model=command[command.index("--model") + 1], variant=variant)
-    output = _run_process(command, job_dir / f"opencode-{agent}.log", timeout=timeout, agent=agent, root=root)
+    model = command[command.index("--model") + 1]
+    event("agent_start", agent=agent, model=model, variant=variant)
+    started = time.monotonic()
+    completed = _run_process(command, job_dir / f"opencode-{agent}.log", timeout=timeout, agent=agent, root=root)
+    seconds = round(time.monotonic() - started, 1)
+    tokens = tokens_from_output(completed.stdout)
+    if tokens:  # a failed run still used tokens, so record it before deciding whether it failed
+        record_run(job_dir, agent, model, variant, seconds, tokens)
+    event(
+        "agent_done",
+        logging.INFO if completed.returncode == 0 else logging.WARNING,
+        agent=agent,
+        exit_code=completed.returncode,
+        seconds=seconds,
+        tokens=tokens["total"] if tokens else None,
+        output=(job_dir / f"opencode-{agent}.log").relative_to(root),
+    )
+    output = _check_exit(command, completed)
     write_json(job_dir / AGENT_FILES[agent][1], _parse_opencode_json(output))
 
 
-def _run_process(command: list[str], log_path: Path, timeout: int, agent: str, root: Path) -> str:
+def _run_process(
+    command: list[str], log_path: Path, timeout: int, agent: str, root: Path
+) -> subprocess.CompletedProcess[str]:
     # OpenCode takes its project directory from $PWD when set, and cwd= does not
     # update it. An inherited PWD (e.g. from Git Bash) would point OpenCode at the
     # wrong directory, where the workspace agents do not exist.
     env = {**os.environ, "PWD": str(root)}
-    started = time.monotonic()
     try:
         completed = subprocess.run(
             command,
@@ -94,19 +112,16 @@ def _run_process(command: list[str], log_path: Path, timeout: int, agent: str, r
     except subprocess.TimeoutExpired as error:
         event("agent_timeout", logging.WARNING, agent=agent, seconds=timeout)
         raise RuntimeError(f"Process timed out after {timeout} seconds: {command[0]}") from error
-    event(
-        "agent_done",
-        logging.INFO if completed.returncode == 0 else logging.WARNING,
-        agent=agent,
-        exit_code=completed.returncode,
-        seconds=round(time.monotonic() - started, 1),
-        output=log_path.relative_to(root),
-    )
     log_path.write_text(
         f"COMMAND: {json.dumps(command, ensure_ascii=True)}\n"
         f"EXIT CODE: {completed.returncode}\n\nSTDOUT\n{completed.stdout}\n\nSTDERR\n{completed.stderr}",
         encoding="utf-8",
     )
+    return completed
+
+
+def _check_exit(command: list[str], completed: subprocess.CompletedProcess[str]) -> str:
+    """Return the output of a successful run; raise RateLimited or RuntimeError for a failed one."""
     if completed.returncode != 0:
         combined = completed.stdout + completed.stderr
         if "usage limit" in combined.lower() or '"statusCode":429' in combined:

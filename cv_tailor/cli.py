@@ -1,4 +1,4 @@
-"""Command line entry point: ``cv-tailor init | serve | doctor``."""
+"""Command line entry point: ``cv-tailor init | serve | doctor | usage``."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from .config import CONFIG_NAME, DEFAULTS, ConfigError, load_config, workspace_r
 from .docx_io import extract_cv
 from .render import RenderError, select_renderer
 from .sample import write_sample_cv
+from .usage import report, summarise
 
 TEMPLATES = Path(__file__).resolve().parent / "templates"
 DATA_DIRECTORIES = ("data/cv_library", "data/output", "data/runtime")
@@ -114,6 +115,13 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     return 0 if healthy else 1
 
 
+def cmd_usage(args: argparse.Namespace) -> int:
+    root = workspace_root(args.workspace)
+    jobs_dir = root / load_config(root)["runtime_dir"] / "jobs"
+    print(report(summarise(jobs_dir) if jobs_dir.is_dir() else []))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="cv-tailor", description="Local companion for the CV Tailor browser extension")
     parser.add_argument("--version", action="version", version=f"cv-tailor {__version__}")
@@ -133,6 +141,10 @@ def main(argv: list[str] | None = None) -> int:
     doctor = commands.add_parser("doctor", help="check that everything needed is in place")
     doctor.add_argument("--workspace", help="workspace directory (default: $CV_TAILOR_HOME or current directory)")
     doctor.set_defaults(handler=cmd_doctor)
+
+    usage = commands.add_parser("usage", help="show the tokens each job's agent runs used")
+    usage.add_argument("--workspace", help="workspace directory (default: $CV_TAILOR_HOME or current directory)")
+    usage.set_defaults(handler=cmd_usage)
 
     args = parser.parse_args(argv)
     handler: Callable[[argparse.Namespace], int] = args.handler

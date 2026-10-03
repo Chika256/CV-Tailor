@@ -71,13 +71,15 @@ Your workspace holds all personal data (`cv-tailor.json`, `data/`). Keep it outs
 | `candidate_name` | *(from CV)* | Prefix for output filenames |
 | `port` | `8765` | Loopback only; if you change it, set the same port in the extension under **Companion connection** |
 
+`cv-tailor usage` lists the tokens each agent run used, as OpenCode reported them, with the median per agent and per job.
+
 ## Safety model
 
 - The companion binds to `127.0.0.1` only and requires a generated bearer token. Pairing is accepted only from a `chrome-extension://` origin.
 - Autofill never touches passwords, demographic or diversity questions, date of birth, identity numbers or pay, never overwrites a filled field, and never submits.
 - Agents are read-only, have no shell, and are told to read a single input file.
 - A usage-limit error pauses the queue and resumes after the reset rather than failing.
-- The log (`data/runtime/companion.log`, rotated at 1 MB, four files kept) records job ids, states, agent exit codes and timings, never CV text, listings or your answers. Each failed job also keeps its traceback in `companion-error.log` in its job folder.
+- The log (`data/runtime/companion.log`, rotated at 1 MB, four files kept) records job ids, states, agent exit codes, timings and token counts, never CV text, listings or your answers. Each failed job also keeps its traceback in `companion-error.log` in its job folder.
 
 ## Troubleshooting
 
