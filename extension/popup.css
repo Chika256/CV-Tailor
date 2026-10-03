@@ -39,8 +39,10 @@
   --color-success: oklch(40% 0.085 170);
   --color-success-bg: oklch(94.5% 0.03 170);
   --color-neutral-bg: oklch(93% 0.008 95);
+  --color-field-hover: oklch(96.5% 0.006 95);
 
   --font-body: "Geist", ui-sans-serif, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
 
   --space-3xs: 0.25rem;
   --space-2xs: 0.5rem;
@@ -476,4 +478,105 @@ select {
 
 .manual-result:empty {
   display: none;
+}
+
+/* Hallmark · component: inline text field + save (Companion connection) · genre: modern-minimal · theme: popup tokens
+ * states: default · hover · focus · active · disabled · loading · error · success
+ * contrast: pass (40-41)
+ */
+code {
+  font-family: var(--font-mono);
+}
+
+.summary-meta {
+  margin-left: auto;
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin-top: var(--space-3xs);
+}
+
+.field {
+  position: relative;
+  flex: 0 0 8rem;
+}
+
+/* Border width never changes between states; only colour, background and the focus outline do. */
+.field input {
+  margin-top: 0;
+  padding-right: calc(var(--space-xs) + 1.25rem);
+  outline: 2px solid transparent;
+  outline-offset: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (hover: hover) {
+  .field input:hover:not(:focus):not(:disabled) {
+    background: var(--color-field-hover);
+  }
+}
+
+.field input:focus-visible {
+  border-color: var(--color-ink-2);
+  outline-color: var(--color-focus);
+}
+
+.field input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* Reserved right-edge slot, so a glyph appearing never reflows the field. */
+.field-glyph {
+  position: absolute;
+  top: 50%;
+  right: var(--space-xs);
+  width: 1.25rem;
+  transform: translateY(-50%);
+  font-weight: 600;
+  text-align: center;
+  pointer-events: none;
+}
+
+.field[data-state="error"] .field-glyph::before {
+  content: "\26A0\FE0E";
+  color: var(--color-error);
+}
+
+.field[data-state="success"] input {
+  border-color: var(--color-success);
+}
+
+.field[data-state="success"] .field-glyph::before {
+  content: "\2713";
+  color: var(--color-success);
+}
+
+details .field-row .secondary {
+  flex: 1 1 auto;
+  width: auto;
+  margin-top: 0;
+}
+
+/* Helper, error and confirmation share one slot with a stable two-line height. */
+.field-help {
+  min-height: 3em;
+  margin: var(--space-3xs) 0 0;
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+
+.field-help[data-state="error"] {
+  color: var(--color-error);
+}
+
+.field-help[data-state="success"] {
+  color: var(--color-success);
 }

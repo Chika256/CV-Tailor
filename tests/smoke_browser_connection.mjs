@@ -131,7 +131,7 @@ try {
     return text;
   };
 
-  const statusText = await waitForStatus(/^Companion connected|failed|Cannot reach/i);
+  const statusText = await waitForStatus(/^Companion connected|failed|Can’t reach/i);
   assert.match(statusText, /^Companion connected/, `Extension connection failed: ${statusText}`);
 
   // Exercise the same fetch path directly in the extension page with no synthetic
@@ -156,27 +156,51 @@ try {
   if (port) {
     // Drive the Companion connection panel: reject an invalid port, report an unreachable
     // one by its URL, then switch back and re-pair with the real companion.
+    const fieldState = `({
+      field: document.querySelector('#companion-port-field').dataset.state || '',
+      help: document.querySelector('#companion-port-help').textContent,
+      invalid: document.querySelector('#companion-port').getAttribute('aria-invalid'),
+      address: document.querySelector('#connection-address').textContent,
+    })`;
     const savePort = (value) => evaluate(`(async () => {
-      document.querySelector('#connection-panel').open = true;
+      const panel = document.querySelector('#connection-panel');
+      if (!panel.open) {
+        // Opening fills the field with the saved port; type only after that, as a person would.
+        panel.open = true;
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
       document.querySelector('#companion-port').value = ${JSON.stringify(String(value))};
       document.querySelector('#companion-port-save').click();
       await new Promise((resolve) => setTimeout(resolve, 300));
       return {
-        result: document.querySelector('#connection-result').textContent,
-        invalid: document.querySelector('#companion-port').getAttribute('aria-invalid'),
+        ...${fieldState},
         stored: (await chrome.storage.local.get(['companionPort', 'pairingToken'])),
       };
     })()`);
 
     const rejected = await savePort("80");
     assert.equal(rejected.invalid, "true", "A privileged port must be rejected");
+    assert.equal(rejected.field, "error", "The field must show its error state, not colour alone");
+    assert.match(rejected.help, /“80” isn’t a usable port/, "The error must replace the helper text");
     assert.equal(rejected.stored.companionPort, port, "A rejected port must not be stored");
+
+    const corrected = await evaluate(`(() => {
+      const input = document.querySelector('#companion-port');
+      input.value = '${port}';
+      input.dispatchEvent(new Event('input'));
+      return ${fieldState};
+    })()`);
+    assert.equal(corrected.field, "", "Fixing the value must clear the error");
+    assert.equal(corrected.invalid, null);
+    assert.match(corrected.help, /cv-tailor\.json/, "The helper text must return");
 
     const unused = await freePort();
     const moved = await savePort(unused);
     assert.equal(moved.stored.companionPort, unused);
     assert.equal(moved.stored.pairingToken, undefined, "Changing the port must discard the old token");
-    const unreachable = await waitForStatus(/Cannot reach/);
+    assert.equal(moved.field, "success");
+    assert.equal(moved.address, `127.0.0.1:${unused}`, "The panel summary must show the new address");
+    const unreachable = await waitForStatus(/Can’t reach/);
     assert.match(unreachable, new RegExp(`127\\.0\\.0\\.1:${unused}`), "The error must name the port it tried");
 
     await savePort(port);

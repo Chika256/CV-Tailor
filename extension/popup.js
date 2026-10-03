@@ -164,8 +164,8 @@ async function refreshJobs(preserveStatus = false) {
       ? `Companion authentication failed: ${error.message}. The companion is running; update and restart it.`
       : error.status
         ? `Companion request failed: ${error.message}.`
-        : `Cannot reach the companion at ${await getServerUrl()}. Start it with: cv-tailor serve, `
-          + `or set the port under Companion connection. ${error.message}`;
+        : `Can’t reach the companion at 127.0.0.1:${await getCompanionPort()}. `
+          + "Start it with cv-tailor serve, or change the port under Companion connection.";
     setStatus(message, "error");
   }
 }
@@ -573,37 +573,66 @@ document.querySelector("#knowledge-import-chat").addEventListener("change", asyn
   event.target.value = "";
 });
 
+const portForm = document.querySelector("#port-form");
+const portField = document.querySelector("#companion-port-field");
 const portInput = document.querySelector("#companion-port");
+const portHelp = document.querySelector("#companion-port-help");
 const portSaveButton = document.querySelector("#companion-port-save");
-const connectionResult = document.querySelector("#connection-result");
+const portHelpDefault = portHelp.innerHTML;
+
+async function showCompanionAddress() {
+  document.querySelector("#connection-address").textContent = `127.0.0.1:${await getCompanionPort()}`;
+}
+
+// Helper, error and confirmation text share one slot below the field.
+function setPortState(state = "", message = "") {
+  portField.dataset.state = state;
+  portHelp.dataset.state = state;
+  if (state === "error") portInput.setAttribute("aria-invalid", "true");
+  else portInput.removeAttribute("aria-invalid");
+  if (message) portHelp.textContent = message;
+  else portHelp.innerHTML = portHelpDefault;
+}
 
 document.querySelector("#connection-panel").addEventListener("toggle", async (event) => {
   if (event.target.open) {
     portInput.value = await getCompanionPort();
-    connectionResult.textContent = "";
+    setPortState();
   }
 });
-portInput.addEventListener("input", () => portInput.removeAttribute("aria-invalid"));
-portSaveButton.addEventListener("click", async () => {
+portInput.addEventListener("blur", () => {
+  if (portInput.value.trim() && parsePort(portInput.value) === null) {
+    setPortState("error", describePortError(portInput.value));
+  }
+});
+portInput.addEventListener("input", () => {
+  const state = portField.dataset.state;
+  if (state === "success" || (state === "error" && parsePort(portInput.value) !== null)) setPortState();
+});
+portForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
   setBusy(portSaveButton, true);
   try {
     const previous = await getCompanionPort();
     const port = await setCompanionPort(portInput.value);
     portInput.value = port;
-    connectionResult.textContent = `Using ${await getServerUrl()}.`;
-    if (port !== previous) {
+    await showCompanionAddress();
+    if (port === previous) {
+      setPortState("success", `Already using 127.0.0.1:${port}.`);
+    } else {
+      setPortState("success", `Saved. Connecting to 127.0.0.1:${port}…`);
       // Jobs and badge state came from the previous companion.
       await chrome.action.setBadgeText({ text: "" });
       lastJobsSignature = "";
       await refreshJobs();
     }
   } catch (error) {
-    portInput.setAttribute("aria-invalid", "true");
-    connectionResult.textContent = error.message;
+    setPortState("error", error.message);
   } finally {
     setBusy(portSaveButton, false);
   }
 });
+showCompanionAddress();
 
 chrome.storage.local.get("drafts").then((stored) => {
   drafts = stored.drafts || {};

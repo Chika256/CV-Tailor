@@ -25,10 +25,17 @@ async function getServerUrl() {
 
 // The pairing token and watched jobs belong to one companion, so both are dropped
 // when the port changes; the extension re-pairs on its next request.
+function describePortError(value) {
+  const text = String(value ?? "").trim();
+  if (!text) return "Enter the port value from your workspace’s cv-tailor.json.";
+  return `“${text}” isn’t a usable port. Enter a number from ${MIN_PORT} to ${MAX_PORT}, `
+    + "matching your workspace’s cv-tailor.json.";
+}
+
 async function setCompanionPort(port) {
   const parsed = parsePort(port);
   if (parsed === null) {
-    throw new Error(`Enter a port between ${MIN_PORT} and ${MAX_PORT}.`);
+    throw new Error(describePortError(port));
   }
   if (parsed === (await getCompanionPort())) return parsed;
   await chrome.storage.local.set({ companionPort: parsed });

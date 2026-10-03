@@ -68,15 +68,19 @@
       </details>
 
       <details id="connection-panel">
-        <summary>Companion connection</summary>
-        <label>
-          Port
-          <input id="companion-port" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5"
-                 aria-describedby="companion-port-hint">
-        </label>
-        <p id="companion-port-hint" class="job-meta">Must match <code>port</code> in your workspace's cv-tailor.json. The companion always runs on 127.0.0.1.</p>
-        <button id="companion-port-save" class="secondary" type="button">Save port</button>
-        <p id="connection-result" class="job-meta" role="status"></p>
+        <summary>Companion connection <span id="connection-address" class="summary-meta"></span></summary>
+        <form id="port-form" novalidate>
+          <label for="companion-port">Companion port</label>
+          <div class="field-row">
+            <div id="companion-port-field" class="field">
+              <input id="companion-port" name="port" type="text" inputmode="numeric" autocomplete="off"
+                     maxlength="5" aria-describedby="companion-port-help">
+              <span class="field-glyph" aria-hidden="true"></span>
+            </div>
+            <button id="companion-port-save" class="secondary" type="submit">Save port</button>
+          </div>
+          <p id="companion-port-help" class="field-help" aria-live="polite">The <code>port</code> value in your workspace’s cv-tailor.json.</p>
+        </form>
       </details>
 
       <section class="jobs" aria-labelledby="jobs-heading">
