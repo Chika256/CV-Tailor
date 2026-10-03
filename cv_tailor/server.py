@@ -722,10 +722,16 @@ class TailoringCompanion:
         write_json(job_dir / output_name, parsed)
 
     def _run_process(self, command: list[str], log_path: Path, timeout: int) -> str:
+        # OpenCode takes its project directory from $PWD when set, and cwd= does not
+        # update it. An inherited PWD (e.g. from Git Bash) would point OpenCode at the
+        # wrong directory, where the workspace agents do not exist.
+        env = {**os.environ, "PWD": str(self.root)}
         try:
             completed = subprocess.run(
                 command,
                 cwd=self.root,
+                env=env,
+                stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
                 encoding="utf-8",

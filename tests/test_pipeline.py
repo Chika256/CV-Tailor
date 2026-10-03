@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -18,7 +19,11 @@ from cv_tailor.docx_io import extract_cv
 from cv_tailor.server import TailoringCompanion
 
 FAKE_AGENT = r'''
-import json, re, sys
+import json, os, re, sys
+# Like OpenCode, trust $PWD over the real working directory.
+pwd = os.environ.get("PWD")
+if pwd and os.path.normcase(os.path.realpath(pwd)) != os.path.normcase(os.path.realpath(os.getcwd())):
+    raise SystemExit(4)
 args = sys.argv
 agent = args[args.index("--agent") + 1]
 text = open(re.search(r"file (\S+\.md)", args[2]).group(1).replace("\\", "/"), encoding="utf8").read()
@@ -69,6 +74,10 @@ class PipelineTests(unittest.TestCase):
         self.directory.cleanup()
 
     def test_job_is_tailored_deduplicated_and_logged(self) -> None:
+        # A PWD inherited from the launching shell must not leak into the agent process.
+        stale_pwd = mock.patch.dict(os.environ, {"PWD": self.directory.name})
+        stale_pwd.start()
+        self.addCleanup(stale_pwd.stop)
         job = self.app.create_job(dict(JOB))
         self.app.work_queue.join()
         status = self.app.get_job(job["job_id"])
