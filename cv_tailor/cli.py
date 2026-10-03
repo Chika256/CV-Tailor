@@ -91,7 +91,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     if opencode:
         listed = subprocess.run([opencode, "models"], capture_output=True, text=True, timeout=60, check=False)
         known = config["opencode_model"] in listed.stdout.split()
-        _check("Model is available to OpenCode", known, "run `opencode auth login` or pick another model", warn_only=True)
+        _check("Model is available to OpenCode", known,
+               "" if known else "run `opencode auth login` or pick another model", warn_only=True)
     master = root / config["master_cv"]
     healthy &= _check("Master CV exists", master.is_file(), str(master))
     if master.is_file():

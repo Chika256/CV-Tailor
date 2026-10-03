@@ -2,10 +2,12 @@ import contextlib
 import io
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -90,6 +92,21 @@ class CliTests(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()):
                 main(["init", str(root)])
             self.assertEqual(load_config(root)["opencode_model"], "other/model")
+
+    def test_doctor_gives_the_sign_in_hint_only_when_the_model_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "ws"
+            with contextlib.redirect_stdout(io.StringIO()):
+                main(["init", str(root), "--model", "provider/model", "--sample"])
+            for listed, expected in (("provider/model\nother/model\n", "[ok  ] Model is available to OpenCode\n"),
+                                     ("other/model\n", "[warn] Model is available to OpenCode - run `opencode auth")):
+                models = subprocess.CompletedProcess([], 0, stdout=listed, stderr="")
+                out = io.StringIO()
+                with (mock.patch("cv_tailor.cli.shutil.which", return_value="/bin/opencode"),
+                      mock.patch("cv_tailor.cli.subprocess.run", return_value=models),
+                      contextlib.redirect_stdout(out)):
+                    self.assertEqual(main(["doctor", "--workspace", str(root)]), 0, out.getvalue())
+                self.assertIn(expected, out.getvalue())
 
     def test_agent_prompts_do_not_assume_a_workspace_layout(self) -> None:
         # runtime_dir and the other data folders are configurable; the companion passes exact paths.

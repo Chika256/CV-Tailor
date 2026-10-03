@@ -77,7 +77,7 @@ def validate(config: dict[str, Any], root: Path) -> None:
             "(list the ones you can use with `opencode models`)."
         )
     if "/" not in str(config["opencode_model"]):
-        raise ConfigError("opencode_model must look like provider/model, for example openai/gpt-5")
+        raise ConfigError("opencode_model must look like provider/model; `opencode models` lists the ones you can use")
     if config["render_backend"] not in {"auto", "word", "libreoffice", "none"}:
         raise ConfigError("render_backend must be one of: auto, word, libreoffice, none")
     if config["ai_qa_mode"] not in {"on_failure", "always"}:
