@@ -602,8 +602,7 @@ class TailoringCompanion:
         except ValueError as error:
             raise RuntimeError(str(error)) from error
         header = [p["text"] for p in cv_document["paragraphs"][:2] if p.get("text")]
-        company = _filename_component(str(job.get("company") or "Company"))
-        title = _filename_component(str(job.get("title") or "Role"))
+        company, title = _filename_parts(job, "Role")
         target = self.output_dir / f"{self._candidate_slug()}_{company}_{title}_Cover_Letter.docx"
         write_cover_letter_docx(target, header, datetime.now().strftime("%d %B %Y"), letter)
         self._update_status(
@@ -662,8 +661,7 @@ class TailoringCompanion:
             raise RuntimeError("Safety stop: the protected master CV changed during processing")
 
     def _output_path(self, job: dict[str, Any], job_id: str) -> Path:
-        company = _filename_component(str(job.get("company") or "Company"))
-        title = _filename_component(str(job.get("title") or "Target_Role"))
+        company, title = _filename_parts(job, "Target_Role")
         filename = f"{self._candidate_slug()}_{company}_{title}_CV.docx"
         candidate = (self.output_dir / filename).resolve()
         if candidate.parent != self.output_dir:
@@ -678,6 +676,34 @@ class TailoringCompanion:
 def _filename_component(value: str) -> str:
     cleaned = SAFE_FILENAME.sub("_", value.strip()).strip("_")
     return cleaned[:80] or "Unknown"
+
+
+def _filename_parts(job: dict[str, Any], default_title: str) -> tuple[str, str]:
+    """The company and title parts of an output filename, with the company left out of the title."""
+    company = str(job.get("company") or "")
+    title = _title_without_company(str(job.get("title") or default_title), company)
+    return _filename_component(company or "Company"), _filename_component(title)
+
+
+def _title_without_company(title: str, company: str) -> str:
+    """Drop the company that listing titles often repeat ("Role - Company", "Role at Company")."""
+    words = [word for word in SAFE_FILENAME.split(title) if word]
+    company_words = [word.lower() for word in SAFE_FILENAME.split(company) if word]
+    if not company_words:
+        return title
+    size = len(company_words)
+    kept: list[str] = []
+    index = 0
+    while index < len(words):
+        if [word.lower() for word in words[index : index + size]] == company_words:
+            if kept and kept[-1].lower() == "at":
+                kept.pop()
+            index += size
+        else:
+            kept.append(words[index])
+            index += 1
+    # A title that is only the company stays as it is rather than becoming empty.
+    return "_".join(kept) if kept else title
 
 
 def _open_with_default_app(path: Path) -> None:

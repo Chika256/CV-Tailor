@@ -167,6 +167,21 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(letter["letter_state"], "completed", letter.get("letter_message"))
         self.assertTrue((self.root / letter["letter_path"]).is_file())
 
+    def test_output_filenames_do_not_repeat_the_company_named_in_the_title(self) -> None:
+        job = self.app.create_job({
+            **JOB,
+            "company": "Northwind Analytics",
+            "title": "Junior Data Engineer - Northwind Analytics (fictional listing for trying the tool)",
+        })
+        self.app.work_queue.join()
+        self.app.request_cover_letter(job["job_id"])
+        self.app.work_queue.join()
+        status = self.app.get_job(job["job_id"])
+        self.assertEqual(status["letter_state"], "completed", status.get("letter_message"))
+        stem = "Alex_Morgan_Northwind_Analytics_Junior_Data_Engineer_fictional_listing_for_trying_the_tool"
+        self.assertEqual(Path(status["output_path"]).name, f"{stem}_CV.docx")
+        self.assertEqual(Path(status["letter_path"]).name, f"{stem}_Cover_Letter.docx")
+
     def test_a_plan_with_no_changes_completes_with_an_unchanged_copy(self) -> None:
         job = self.app.create_job({**JOB, "description": JOB["description"] + " [no changes]"})
         self.app.work_queue.join()

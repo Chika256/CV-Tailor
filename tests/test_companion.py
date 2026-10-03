@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from cv_tailor.agents import _parse_opencode_json
-from cv_tailor.companion import _filename_component
+from cv_tailor.companion import _filename_component, _filename_parts
 from cv_tailor.intake import validate_job_payload
 
 MINIMUM = 100  # description length; the default is 500
@@ -50,6 +50,23 @@ class PayloadValidationTests(unittest.TestCase):
 
     def test_sanitizes_output_filename_components(self) -> None:
         self.assertEqual(_filename_component("Example & Co / UK"), "Example_Co_UK")
+
+    def test_filename_title_leaves_out_the_company_it_repeats(self) -> None:
+        company = "Northwind Analytics"
+        for title, expected in [
+            ("Junior Data Engineer - Northwind Analytics (fictional listing for trying the tool)",
+             "Junior_Data_Engineer_fictional_listing_for_trying_the_tool"),
+            ("Data Engineer | NORTHWIND ANALYTICS", "Data_Engineer"),
+            ("Data Engineer at Northwind Analytics", "Data_Engineer"),
+            ("Northwind Analytics: Data Engineer", "Data_Engineer"),
+            ("Data Engineer, Northwind", "Data_Engineer_Northwind"),  # only the whole company name
+            ("Northwind Analytics", "Northwind_Analytics"),  # never an empty title
+        ]:
+            with self.subTest(title=title):
+                self.assertEqual(
+                    _filename_parts({"company": company, "title": title}, "Role"), ("Northwind_Analytics", expected)
+                )
+        self.assertEqual(_filename_parts({"title": "Company Secretary"}, "Role"), ("Company", "Company_Secretary"))
 
     def test_extracts_json_from_opencode_event_stream(self) -> None:
         output = (
