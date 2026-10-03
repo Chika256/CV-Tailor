@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/). The companion package and the browser extension are versioned separately; the extension's version is given in brackets.
 
-## [0.1.0] - Unreleased (extension 1.4.0)
+## [0.1.0] - 2026-10-03 (extension 1.4.0)
 
 First public release.
 
@@ -38,4 +38,4 @@ First public release.
 - The companion listens on `127.0.0.1` only; job endpoints need a bearer token, and pairing is accepted only from an extension origin.
 - CI on Linux, macOS and Windows with Python 3.11 to 3.14, ruff, strict mypy, extension tests and a real LibreOffice render; gitleaks secret scanning; Dependabot; actions pinned to commit SHAs.
 
-[0.1.0]: https://github.com/Chika256/CV-Tailor/commits/main
+[0.1.0]: https://github.com/Chika256/CV-Tailor/releases/tag/v0.1.0
