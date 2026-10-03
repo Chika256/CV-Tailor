@@ -18,7 +18,10 @@ LLM-written CVs fail in two ways: they fabricate, and they wreck formatting. Thi
 
 ## How it works
 
-![How a job flows: the extension sends a listing; the local companion validates the model's JSON plan, applies it to a copy and checks the layout; the agents only read and return JSON.](docs/architecture.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/architecture-dark.svg">
+  <img alt="How a job flows: the extension sends a listing; an untrusted OpenCode agent reads one input file and returns a JSON plan; the local companion validates it against the real CV, applies it to a copy, checks the layout, and only calls the AI page check if a free check flags a problem." src="docs/architecture.svg">
+</picture>
 
 The details, including each module and the trust boundaries, are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -124,4 +127,4 @@ Layout: `cv_tailor/` (companion), `extension/` (browser extension), `cv_tailor/t
 
 ## Licence
 
-MIT. The bundled Geist font is under the SIL Open Font Licence (`extension/fonts/OFL.txt`).
+MIT. The bundled Geist font is under the SIL Open Font Licence (`extension/fonts/OFL.txt`). The architecture diagram embeds a subset of Cascadia Code, also under the SIL Open Font Licence.

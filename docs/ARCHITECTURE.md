@@ -1,6 +1,11 @@
 # Architecture
 
-![How a job flows through the extension, the companion and the agents](architecture.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="architecture-dark.svg">
+  <img alt="How a job flows: the extension sends a listing; an untrusted OpenCode agent reads one input file and returns a JSON plan; the local companion validates it against the real CV, applies it to a copy, checks the layout, and only calls the AI page check if a free check flags a problem." src="architecture.svg">
+</picture>
+
+The diagram's source is [architecture.excalidraw](architecture.excalidraw); open it at [excalidraw.com](https://excalidraw.com) to edit it, then export both SVGs (light, and dark with the dark-mode export option).
 
 ## Components
 
