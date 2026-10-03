@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, cast
 from urllib.parse import parse_qs, urlparse
 
-from . import docx_io
+from . import __version__, docx_io
 from .applicant import PROFILE_FIELDS, ProfileStore
 from .docx_ops import (
     PlanError,
@@ -857,7 +857,10 @@ class CompanionHandler(BaseHTTPRequestHandler):
         try:
             path = urlparse(self.path).path
             if path == "/health":
-                self._send_json({"status": "ok", "version": 1})
+                # Unauthenticated, so it reports only what helps diagnose a setup: no paths, no job data.
+                self._send_json(
+                    {"status": "ok", "api_version": 1, "version": __version__, "renderer": self.app.renderer.name}
+                )
                 return
             if not self._authorized():
                 self._send_json({"error": "Unauthorized"}, HTTPStatus.UNAUTHORIZED)

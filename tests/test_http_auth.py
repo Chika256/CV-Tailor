@@ -10,6 +10,7 @@ from unittest.mock import Mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from cv_tailor import __version__
 from cv_tailor.server import CompanionHandler
 
 
@@ -22,6 +23,7 @@ class CompanionHttpAuthTests(unittest.TestCase):
         cls.server = ThreadingHTTPServer(("127.0.0.1", 0), CompanionHandler)
         cls.server.app = SimpleNamespace(
             token=cls.token,
+            renderer=SimpleNamespace(name="libreoffice"),
             list_jobs=lambda: [],
             create_job=Mock(return_value={"job_id": "test-job", "state": "queued"}),
         )
@@ -44,6 +46,13 @@ class CompanionHttpAuthTests(unittest.TestCase):
             return response.status, value, dict(response.getheaders())
         finally:
             connection.close()
+
+    def test_health_needs_no_token_and_reports_only_version_and_renderer(self) -> None:
+        status, body, _ = self.request("GET", "/health")
+        self.assertEqual(status, 200)
+        self.assertEqual(
+            body, {"status": "ok", "api_version": 1, "version": __version__, "renderer": "libreoffice"}
+        )
 
     def test_get_jobs_accepts_bearer_when_chrome_omits_origin(self) -> None:
         status, body, _ = self.request(
