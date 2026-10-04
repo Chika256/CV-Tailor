@@ -438,8 +438,8 @@ class TailoringCompanion:
                     extra = (
                         "## Layout problems to fix\n"
                         + "\n".join(f"- {issue}" for issue in qa.get("issues", []))
-                        + "\n\n## Current plan (return a full corrected plan)\n"
-                        + json.dumps(result.get("replacements", []), ensure_ascii=False, separators=(",", ":"))
+                        + "\n\n## Current plan (return a full corrected plan; one replacement per line)\n"
+                        + "\n".join(json.dumps(item, ensure_ascii=False) for item in result.get("replacements", []))
                     )
                     answers_path = job_dir / "answers.json"
                     answers = read_json(answers_path).get("answers") if answers_path.exists() else None

@@ -7,6 +7,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from cv_tailor.prep import (
+    MAX_INPUT_LINE,
+    build_input,
     clean_description,
     deterministic_layout_issues,
     fit_score,
@@ -19,6 +21,32 @@ from cv_tailor.prep import (
 
 def para(index, start, end=None, is_list=False, length=60):
     return {"index": index, "start_page": start, "end_page": end or start, "is_list": is_list, "length": length}
+
+
+class InputPackageTests(unittest.TestCase):
+    def test_every_line_fits_what_the_agent_can_read(self) -> None:
+        # OpenCode's read tool cuts each line after 2,000 characters, so the agent never saw the rest of
+        # the knowledge base (written as one JSON line) or of a listing captured as one long line.
+        note = "Built the configurator with Mesh Training Ltd in weekly meetings. " * 40
+        knowledge = {
+            "schema_version": 1,
+            "explicit_user_answers": [{"kind": "answer", "source": "job j1", "question": "1. Docker?", "text": "Yes."}],
+            "user_notes_and_corrections": [{"kind": "note", "source": "user", "text": note}],
+            "other_cv_evidence": [{"kind": "cv", "source": f"cv{n}.docx", "text": f"Paragraph {n} " * 30} for n in range(20)],
+        }
+        job = {"title": "Engineer", "company": "Acme", "url": "https://example.com/j",
+               "description": "Requirements: " + "Python and SQL. " * 300}
+        cv = {"paragraphs": [{"id": "document:p0001", "text": "Profile.", "editable": True}]}
+        template = {"family": "data", "company": "Old", "title": "Role", "replacements": [
+            {"paragraph_id": f"document:p{n:04d}", "new_text": "Rewritten bullet text. " * 8} for n in range(1, 30)
+        ]}
+        text = build_input(job, cv, None, knowledge, template)
+        self.assertLessEqual(max(len(line) for line in text.splitlines()), MAX_INPUT_LINE)
+        self.assertLess(MAX_INPUT_LINE, 2000)
+        flattened = " ".join(text.split())
+        self.assertIn(" ".join(note.split()), flattened)
+        self.assertEqual(flattened.count("Python and SQL."), 300)
+        self.assertIn("### other_cv_evidence", text)
 
 
 class PrepTests(unittest.TestCase):

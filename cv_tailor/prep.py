@@ -5,12 +5,17 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import textwrap
 import zipfile
 from collections import Counter
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 from xml.sax.saxutils import escape
+
+# OpenCode's read tool cuts every line after 2,000 characters, so an agent never sees the rest of a longer
+# line. Input files keep their lines shorter than that, with room for the line-number prefix it adds.
+MAX_INPUT_LINE = 1800
 
 BOILERPLATE_LINE = re.compile(
     r"equal opportunit|diversity|inclusi(on|ve) (employer|workplace)|reasonable adjustment|"
@@ -166,12 +171,12 @@ def build_input(
     if answers:
         parts.append(f"## Answers to your earlier questions (verbatim)\n{answers}")
     parts.append(
-        "## Knowledge base (approved evidence; attributed to the source shown)\n"
-        + json.dumps(knowledge, ensure_ascii=False, separators=(",", ":"))
+        "## Knowledge base (approved evidence; attributed to the source shown; one JSON record per line)\n"
+        + render_knowledge(knowledge)
     )
     if template:
         plan = [
-            {"id": r["paragraph_id"], "new_text": r["new_text"]}
+            json.dumps({"id": r["paragraph_id"], "new_text": r["new_text"]}, ensure_ascii=False)
             for r in template.get("replacements", [])
         ]
         parts.append(
@@ -179,11 +184,34 @@ def build_input(
             f"({template.get('company')} - {template.get('title')})\n"
             "Starting point only. Reuse wording that genuinely fits THIS job, drop anything that does not, "
             "and verify every claim against the CV and knowledge base. Never carry over company-specific claims.\n"
-            + json.dumps(plan, ensure_ascii=False, separators=(",", ":"))[:3500]
+            + "\n".join(plan)[:3500]
         )
     if extra:
         parts.append(extra)
-    return "\n\n".join(parts) + "\n"
+    return fit_lines("\n\n".join(parts)) + "\n"
+
+
+def render_knowledge(knowledge: dict[str, Any]) -> str:
+    """The knowledge snapshot grouped by section, one record per line instead of one long JSON line."""
+    lines: list[str] = []
+    for key, value in knowledge.items():
+        if isinstance(value, list):
+            lines.append(f"### {key}")
+            lines.extend(json.dumps(item, ensure_ascii=False) for item in value)
+        else:
+            lines.append(f"{key}: {value}")
+    return "\n".join(lines)
+
+
+def fit_lines(text: str, width: int = 1000) -> str:
+    """Break any line longer than MAX_INPUT_LINE at word boundaries, so the agent reads all of it."""
+    out: list[str] = []
+    for line in text.split("\n"):
+        if len(line) <= MAX_INPUT_LINE:
+            out.append(line)
+        else:
+            out.extend(textwrap.wrap(line, width, break_long_words=True, break_on_hyphens=False))
+    return "\n".join(out)
 
 
 def deterministic_layout_issues(layout: dict[str, Any], expected_pages: int) -> list[str]:
