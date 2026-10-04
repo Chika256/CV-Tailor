@@ -13,6 +13,8 @@ from typing import Any
 from urllib.parse import urlparse
 from xml.sax.saxutils import escape
 
+from .docx_ops import removable_paragraphs
+
 # OpenCode's read tool cuts every line after 2,000 characters, so an agent never sees the rest of a longer
 # line. Input files keep their lines shorter than that, with room for the line-number prefix it adds.
 MAX_INPUT_LINE = 1800
@@ -142,12 +144,14 @@ def fit_score(
 
 
 def render_cv(cv_document: dict[str, Any]) -> str:
-    """Compact CV listing: id, whether it may be edited, whether it is a bullet, and the text."""
+    """Compact CV listing: id, whether it may be edited, is a bullet, may be removed, and the text."""
+    removable = removable_paragraphs(cv_document)
     lines = []
     for item in cv_document["paragraphs"]:
         if not str(item.get("text", "")).strip():
             continue
         flags = ("E" if item.get("editable") else "L") + ("b" if item.get("list_type") else "")
+        flags += "x" if item.get("id") in removable else ""
         lines.append(f"{item['id']} [{flags}] {item['text']}")
     return "\n".join(lines)
 
@@ -159,13 +163,21 @@ def build_input(
     knowledge: dict[str, Any],
     template: dict[str, Any] | None,
     extra: str = "",
+    max_pages: int = 0,
 ) -> str:
     description, _ = clean_description(str(job["description"]))
+    master_pages = cv_document.get("page_count")
+    limit = (
+        f"Page limit: the tailored CV must fit in {max_pages} page{'s' if max_pages > 1 else ''}"
+        + (f" (the master is {master_pages}).\n" if master_pages else ".\n")
+        if max_pages else ""
+    )
     parts = [
         "# INPUT PACKAGE\nEverything needed is in this one file. Do not read any other file.",
         f"## Job\nTitle: {job.get('title')}\nCompany: {job.get('company')}\nLocation: {job.get('location') or 'n/a'}\n"
         f"Source: {job.get('url')}\n\n{description}",
-        "## Master CV paragraphs\nFormat: `id [E|L][b] text`. E = editable, L = locked, b = bullet.\n\n"
+        f"## Master CV paragraphs\n{limit}Format: `id [E|L][b][x] text`. E = editable, L = locked, b = bullet, "
+        "x = may be removed to keep the CV within the page limit.\n\n"
         + render_cv(cv_document),
     ]
     if answers:
@@ -176,7 +188,7 @@ def build_input(
     )
     if template:
         plan = [
-            json.dumps({"id": r["paragraph_id"], "new_text": r["new_text"]}, ensure_ascii=False)
+            json.dumps({"id": r["paragraph_id"], "new_text": r.get("new_text", "(removed)")}, ensure_ascii=False)
             for r in template.get("replacements", [])
         ]
         parts.append(
@@ -214,14 +226,32 @@ def fit_lines(text: str, width: int = 1000) -> str:
     return "\n".join(out)
 
 
-def deterministic_layout_issues(layout: dict[str, Any], expected_pages: int) -> list[str]:
-    """Cheap structural checks on per-paragraph page positions. Empty list means likely fine."""
+def page_target(master_pages: int, max_pages: int) -> int:
+    """The page count a tailored CV should have: the master's, but never more than the limit (0 = none)."""
+    return min(master_pages, max_pages) if master_pages and max_pages else master_pages or max_pages
+
+
+def over_page_limit(layout: dict[str, Any], max_pages: int) -> bool:
+    pages = layout.get("page_count")
+    return bool(max_pages) and isinstance(pages, int) and pages > max_pages
+
+
+def deterministic_layout_issues(layout: dict[str, Any], expected_pages: int, max_pages: int = 0) -> list[str]:
+    """Cheap structural checks on per-paragraph page positions. Empty list means likely fine.
+
+    ``expected_pages`` is the master's page count and ``max_pages`` the page limit (0 for none).
+    """
     issues: list[str] = []
     pages = layout.get("page_count")
     if pages is None or not expected_pages:
         return issues  # nothing was rendered, so there is nothing to check
-    if pages != expected_pages:
-        issues.append(f"Page count changed from {expected_pages} to {pages}.")
+    if over_page_limit(layout, max_pages):
+        issues.append(
+            f"The CV is {pages} pages, over the page limit of {max_pages}. Remove the least relevant bullets "
+            "(marked x) or shorten wording until it fits."
+        )
+    elif pages != page_target(expected_pages, max_pages):
+        issues.append(f"Page count changed from {page_target(expected_pages, max_pages)} to {pages}.")
     paragraphs = layout.get("paragraphs")
     if not isinstance(paragraphs, list):
         return issues  # a backend without per-paragraph positions: page count is all we can check

@@ -4,6 +4,10 @@ All notable changes to this project are recorded here. The format follows [Keep 
 
 ## [Unreleased]
 
+### Added
+- A page limit for tailored CVs (`max_pages`, 2 by default; `0` turns it off). A CV over the limit goes straight to revision without an AI page check.
+- A plan may remove up to six project or experience bullets (`"remove": true`) to fit the limit or for relevance. Titles, headings, skills lines and an entry's last bullet are never removed, and the report lists each removal with its reason.
+
 ### Fixed
 - The planning agent now reads its whole input. OpenCode's read tool cuts lines after 2,000 characters, and the knowledge base was written as one JSON line, so once it grew the agent saw only its start.
 - Clarification answers and notes reach the agent in full; they were cut to 600 characters, losing any limit stated at the end.

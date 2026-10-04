@@ -93,6 +93,8 @@ Your workspace holds all personal data (`cv-tailor.json`, `data/`). Keep it outs
 | `render_backend` | `auto` | `auto`, `word`, `libreoffice`, `none` |
 | `min_fit_score` | `20` | Below this keyword fit the job waits for confirmation (`0` disables) |
 | `ai_qa_mode` | `on_failure` | `always` to have the AI inspect every PDF |
+| `max_pages` | `2` | Page limit for tailored CVs (`0` disables). Over it, the job goes straight to revision, which may remove up to six project or experience bullets. If your master CV is longer, raise it or set `0` |
+| `qa_revision_attempts` | `1` | Automatic revisions after a failed layout check |
 | `use_templates` | `true` | Offer the last plan for a similar role as a starting point |
 | `candidate_name` | *(from CV)* | Prefix for output filenames |
 | `port` | `8765` | Loopback only; if you change it, set the same port in the extension under **Companion connection** |
@@ -104,6 +106,7 @@ Your workspace holds all personal data (`cv-tailor.json`, `data/`). Keep it outs
 - The companion binds to `127.0.0.1` only and requires a generated bearer token. Pairing is accepted only from a `chrome-extension://` origin.
 - Autofill never touches passwords, demographic or diversity questions, date of birth, identity numbers or pay, never overwrites a filled field, and never submits.
 - Agents are read-only, have no shell, and are told to read a single input file.
+- A plan may remove a bullet only to fit the page limit or for relevance, and only a project or experience bullet with a sibling: never a title, heading, skills line or an entry's last bullet, and at most six per plan. The change report lists each removal with its reason.
 - A usage-limit error pauses the queue and resumes after the reset rather than failing.
 - The log (`data/runtime/companion.log`, rotated at 1 MB, four files kept) records job ids, states, agent exit codes, timings and token counts, never CV text, listings or your answers. Each failed job also keeps its traceback in `companion-error.log` in its job folder.
 

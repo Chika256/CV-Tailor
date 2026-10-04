@@ -43,7 +43,7 @@ def write_report(
             for line in (
                 f"### {item['paragraph_id']}",
                 f"- Before: {item['original_text']}",
-                f"- After: {item['new_text']}",
+                "- After: (removed)" if item.get("remove") is True else f"- After: {item['new_text']}",
                 f"- Why: {item['reason']}",
                 "",
             )

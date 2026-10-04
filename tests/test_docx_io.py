@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from cv_tailor.docx_io import apply_plan, extract_cv
-from cv_tailor.docx_ops import PlanError, validate_tailoring_result
+from cv_tailor.docx_ops import PlanError, removable_paragraphs, validate_tailoring_result
 from cv_tailor.sample import write_sample_cv
 
 
@@ -67,6 +67,29 @@ class DocxIoTests(unittest.TestCase):
             apply_plan(self.master, Path(self.directory.name) / "o.docx", [
                 {"paragraph_id": locked["id"], "original_text": locked["text"], "new_text": "x", "reason": "r"}
             ])
+
+    def test_extract_records_list_levels_and_which_bullets_may_be_removed(self) -> None:
+        self.assertEqual(self.paragraph("Built a REST API")["list_level"], 1)
+        self.assertEqual(self.paragraph("Inventory Tracker")["list_level"], 0)
+        removable = sorted(item["text"].split()[0] for item in self.cv["paragraphs"]
+                           if item["id"] in removable_paragraphs(self.cv))
+        # Both projects' bullets, under the title-case "Projects" heading; not the skills lines or titles.
+        self.assertEqual(removable, ["Built", "Collaborated", "Containerised", "Developed", "Wrote"])
+
+    def test_apply_removes_a_bullet_and_keeps_the_rest(self) -> None:
+        target = self.paragraph("Wrote unit and integration tests")
+        plan = {
+            "schema_version": 1, "status": "ready",
+            "replacements": [{"paragraph_id": target["id"], "original_text": target["text"], "remove": True,
+                              "reason": "Least relevant for this job."}],
+            "change_summary": ["Removed a bullet."], "unsupported_requirements": [], "recommendations": [],
+        }
+        validate_tailoring_result(plan, self.cv)
+        output = Path(self.directory.name) / "out.docx"
+        self.assertEqual(apply_plan(self.master, output, plan["replacements"]), 1)
+        before = [item["text"] for item in self.cv["paragraphs"]]
+        after = [item["text"] for item in extract_cv(output, "", None)["paragraphs"]]
+        self.assertEqual(after, [text for text in before if text != target["text"]])
 
     def test_plan_validation_accepts_extracted_paragraphs(self) -> None:
         target = self.paragraph("Built a REST API")

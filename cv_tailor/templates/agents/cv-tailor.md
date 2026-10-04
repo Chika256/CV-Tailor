@@ -56,6 +56,8 @@ Create paragraph replacements rather than a rebuilt CV. This preserves the origi
 
 Only use paragraphs whose `editable` field is `true` and whose id starts with `document:` (marked `[E]`). Preserve the paragraph's function: headings remain headings, role titles remain role titles, dates remain dates, and bullets remain bullets. Do not add newline characters. Keep replacement text close to the original length and concise enough for the existing page layout.
 
+Page limit: when `input.md` states one, the tailored CV must fit within it. If your rewrites make the CV longer, remove the least relevant bullets for this job rather than squeezing every paragraph. Only bullets marked `x` can be removed (project and experience bullets that have a sibling; never a title, heading, skills line or an entry's last bullet). To remove one, give its `paragraph_id`, its exact `original_text`, `"remove": true` instead of `new_text`, and a `reason`. Remove at most six, and never every bullet of one entry. Remove a bullet only for length or relevance, never to hide a limitation stated elsewhere.
+
 Do not change a paragraph just to show activity. If the CV already presents the strongest truthful evidence for this job, return `"replacements": []` and say why in `change_summary`; the companion requires that explanation for an empty plan.
 
 Company research: when the job text gives too little context about the employer or programme to write a role-focused profile, you may do one or two quick searches of authoritative sources (the employer's own site first). Skip research when the job text is sufficient, to save usage. Use research only to understand what the role needs; never add unsupported company-specific claims or facts about the candidate.
@@ -93,6 +95,7 @@ Return this exact ready schema as your final response:
 Requirements:
 
 - Copy every `original_text` exactly from the CV paragraph text in `input.md`.
+- A removal is `{"paragraph_id": "...", "original_text": "...", "remove": true, "reason": "..."}`, with no `new_text`.
 - Include only paragraphs that genuinely need changing.
 - Do not produce placeholders, comments, tracked-change instructions, fabricated metrics, or private analysis.
 - Do not claim ATS compatibility by keyword stuffing.

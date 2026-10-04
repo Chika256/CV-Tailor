@@ -7,7 +7,78 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from cv_tailor.docx_ops import PlanError, read_json, validate_qa_result, validate_tailoring_result, write_json
+from cv_tailor.docx_ops import (
+    PlanError,
+    read_json,
+    removable_paragraphs,
+    validate_qa_result,
+    validate_tailoring_result,
+    write_json,
+)
+
+
+def paragraph(number: int, text: str, level: int = 0) -> dict:
+    """A cv.json paragraph; level is the list level counted from 1, 0 for a paragraph that is not a list."""
+    return {"id": f"document:p{number:04d}", "text": text, "editable": bool(text),
+            "list_type": 2 if level else 0, "list_level": level}
+
+
+# Project titles written as list items with their bullets nested under them, and capitalised headings.
+NESTED_CV = {"paragraphs": [
+    paragraph(1, "Alex Morgan"),
+    paragraph(2, "TECHNICAL SKILLS"),
+    paragraph(3, "Languages: Java, Python", 1),
+    paragraph(4, "Frontend: React", 1),
+    paragraph(5, "PROJECTS"),
+    paragraph(6, "Inventory Tracker – Python, Flask", 1),
+    paragraph(7, "Built a REST API for stock management.", 2),
+    paragraph(8, "Added role-based access and input validation.", 2),
+    paragraph(9, ""),
+    paragraph(10, "Study Planner – React", 1),
+    paragraph(11, "Developed a responsive planner.", 2),
+    paragraph(12, "EXPERIENCE"),
+    paragraph(13, "Hackathon participant – Example Hack | Oct 2025"),
+    paragraph(14, "Built a Flask REST API for a finance app.", 1),
+    paragraph(15, "Wrote automated tests for the API.", 1),
+]}
+
+
+def removal_plan(*numbers: int) -> dict:
+    texts = {item["id"]: item["text"] for item in NESTED_CV["paragraphs"]}
+    return {
+        "schema_version": 1, "status": "ready",
+        "replacements": [
+            {"paragraph_id": f"document:p{n:04d}", "original_text": texts[f"document:p{n:04d}"], "remove": True,
+             "reason": "Least relevant claim for this job; removed to keep the CV within two pages."}
+            for n in numbers
+        ],
+        "change_summary": ["Removed a bullet to fit two pages."], "unsupported_requirements": [], "recommendations": [],
+    }
+
+
+class RemovalTests(unittest.TestCase):
+    def test_only_project_and_experience_bullets_with_a_sibling_are_removable(self) -> None:
+        self.assertEqual(
+            removable_paragraphs(NESTED_CV),
+            {"document:p0007", "document:p0008", "document:p0014", "document:p0015"},
+        )
+
+    def test_accepts_removing_a_bullet(self) -> None:
+        plan = removal_plan(8)
+        self.assertEqual(validate_tailoring_result(plan, NESTED_CV), plan)
+
+    def test_rejects_removing_a_title_a_skills_line_a_role_or_a_lone_bullet(self) -> None:
+        for number in (6, 3, 13, 11):
+            with self.subTest(paragraph=number), self.assertRaises(PlanError):
+                validate_tailoring_result(removal_plan(number), NESTED_CV)
+
+    def test_rejects_removing_every_bullet_of_an_entry(self) -> None:
+        with self.assertRaises(PlanError):
+            validate_tailoring_result(removal_plan(7, 8), NESTED_CV)
+
+    def test_a_cv_extracted_without_list_levels_allows_no_removal(self) -> None:
+        old = {"paragraphs": [{k: v for k, v in p.items() if k != "list_level"} for p in NESTED_CV["paragraphs"]]}
+        self.assertEqual(removable_paragraphs(old), set())
 
 
 class TailoringPlanTests(unittest.TestCase):

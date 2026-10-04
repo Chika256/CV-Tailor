@@ -29,6 +29,7 @@ Use only facts in the CV paragraphs, answers and knowledge base in `revise_input
 - Avoid project or role reordering that creates an awkward page split.
 - Keep the original page count and readable spacing.
 - Never shrink fonts, alter spacing, add paragraphs, or fabricate evidence.
+- If the CV is over the page limit stated in `revise_input.md`, remove the least relevant bullets marked `x` (`"remove": true` with the exact `original_text` and a `reason`, no `new_text`) before shortening many paragraphs. At most six removals, never every bullet of one entry.
 
 Every replacement must still use an editable `document:` paragraph and copy `original_text` exactly from the master CV paragraphs in `revise_input.md`, not from the current tailored PDF. Return the same `schema_version: 1`, `status: "ready"`, `job`, `replacements`, `change_summary`, `unsupported_requirements`, and `recommendations` schema required by the `cv-tailor` agent.
 

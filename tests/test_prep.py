@@ -101,6 +101,14 @@ class PrepTests(unittest.TestCase):
         layout = {"page_count": 2, "paragraphs": [para(1, 1), para(2, 1, is_list=True), para(3, 2)]}
         self.assertEqual(deterministic_layout_issues(layout, 2), [])
 
+    def test_layout_flags_a_cv_over_the_page_limit(self) -> None:
+        layout = {"page_count": 3, "paragraphs": [para(1, 1), para(2, 2), para(3, 3)]}
+        issues = deterministic_layout_issues(layout, 2, max_pages=2)
+        self.assertTrue(any("over the page limit of 2" in issue for issue in issues), issues)
+        # A longer master brought down to the limit is the aim, not a page-count problem.
+        fitted = {"page_count": 2, "paragraphs": [para(1, 1), para(2, 2)]}
+        self.assertEqual(deterministic_layout_issues(fitted, 3, max_pages=2), [])
+
     def test_layout_flags_page_count_split_and_orphan(self) -> None:
         layout = {
             "page_count": 3,

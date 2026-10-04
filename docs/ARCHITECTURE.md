@@ -36,9 +36,11 @@ The companion is the hub: it makes every call. The agents read the one input fil
 
 **2. Ask, don't guess.** When the CV lacks evidence for a requirement, the plan agent returns `needs_clarification` with up to ten questions instead of a plan. The job pauses, the popup shows the questions, and `POST /jobs/<id>/answers` stores the answer with its questions in the knowledge base (`knowledge.record_answers`). The plan agent runs again with the answer in its input, and later jobs get it from `knowledge.snapshot` without asking.
 
-**3. Bad plan rejected.** A replacement that names a locked paragraph, misquotes the CV's text, runs too long or pushes the plan past 40 changes or 700 added characters raises `PlanError`. The job fails with that reason before any file is written, and the master CV is unchanged.
+**3. Bad plan rejected.** A replacement that names a locked paragraph, misquotes the CV's text, runs too long, pushes the plan past 40 changes or 700 added characters, or removes a paragraph that may not be removed (anything but a project or experience bullet with a sibling, more than six bullets, or every bullet of an entry) raises `PlanError`. The job fails with that reason before any file is written, and the master CV is unchanged.
 
 **4. Layout fix.** Only when the free layout checks flag something (or with `ai_qa_mode: "always"`) does the AI page check get `qa_input.md` and `preview.pdf`. If it reports the CV is not ready, the revision agent receives the problems and the current plan in `revise_input.md` and returns `revised-result.json`, which is validated, applied to a fresh copy, rendered and checked like the first plan. One revision is allowed by default (`qa_revision_attempts`); if problems remain, the job completes with a warning.
+
+**Page limit.** With `max_pages` (2 by default), a rendered CV over the limit skips the AI page check, since the page count alone settles it, and goes straight to the revision agent. Both agents see the limit in their input file, and the CV listing marks with `x` the bullets they may remove: project and experience bullets that have a sibling. A removal is a replacement with `"remove": true` and no `new_text`; `docx_io.apply_plan` deletes that paragraph from the copy.
 
 **5. Cover letter.** `POST /jobs/<id>/cover-letter` runs the letter agent on the same kind of input file. It returns `letter.json` (salutation, paragraphs, closing), which the companion writes as a DOCX beside the tailored CV.
 

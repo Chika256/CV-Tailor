@@ -27,6 +27,9 @@ TEXT_NODE = re.compile(r"<w:t(?:\s[^>]*)?>(.*?)</w:t>", re.DOTALL)
 STYLE = re.compile(r'<w:pStyle\s+w:val="([^"]*)"')
 NUMBERING = re.compile(r"<w:numPr>.*?</w:numPr>", re.DOTALL)
 NUM_ID = re.compile(r'<w:numId\s+w:val="(\d+)"')
+LIST_LEVEL = re.compile(r'<w:ilvl\s+w:val="(\d+)"')
+# A paragraph that ends a section carries its page settings; removing it would change the layout.
+SECTION_BREAK = re.compile(r"<w:sectPr[\s>]")
 # Anything that makes a plain text replacement unsafe.
 LOCKING_MARKUP = re.compile(
     r"<w:tab[\s/>]|<w:br[\s/>]|<w:cr[\s/>]|<w:hyperlink[\s>]|<w:fldSimple[\s>]|<w:fldChar[\s/>]"
@@ -85,6 +88,7 @@ def extract_cv(path: Path, sha256: str, page_count: int | None) -> dict[str, Any
         # A numbered paragraph is a list item unless its numId is 0 ("numbering removed").
         num_id = NUM_ID.search(numbering.group(0)) if numbering else None
         is_list = numbering is not None and (num_id.group(1) if num_id else "1") != "0"
+        level = LIST_LEVEL.search(numbering.group(0)) if numbering else None
         paragraphs.append(
             {
                 "id": f"document:p{index:04d}",
@@ -92,6 +96,8 @@ def extract_cv(path: Path, sha256: str, page_count: int | None) -> dict[str, Any
                 "text": text,
                 "style": style.group(1) if style else "",
                 "list_type": 2 if is_list else 0,
+                # Counted from 1, as Word does: 1 for a top-level item, 2 for one nested under it.
+                "list_level": (int(level.group(1)) + 1 if level else 1) if is_list else 0,
                 "editable": bool(text.strip()) and not LOCKING_MARKUP.search(block),
             }
         )
@@ -119,7 +125,10 @@ def _replace_text(paragraph_xml: str, new_text: str) -> str:
 
 
 def apply_plan(source: Path, destination: Path, replacements: list[dict[str, Any]]) -> int:
-    """Write a copy of ``source`` with each validated replacement applied; returns the count."""
+    """Write a copy of ``source`` with each validated replacement applied; returns the count.
+
+    A replacement with ``"remove": true`` deletes its paragraph instead of rewriting it.
+    """
     xml = _read_document(source)
     spans = _scan_paragraphs(xml)
     wanted: dict[int, dict[str, Any]] = {}
@@ -143,7 +152,11 @@ def apply_plan(source: Path, destination: Path, replacements: list[dict[str, Any
         if _paragraph_text(block) != wanted[index]["original_text"]:
             raise PlanError(f"Safety stop: paragraph {index} no longer matches the extracted master text")
         pieces.append(xml[cursor:start])
-        pieces.append(_replace_text(block, str(wanted[index]["new_text"])))
+        if wanted[index].get("remove") is True:
+            if SECTION_BREAK.search(block):
+                raise PlanError(f"Paragraph {index} ends a section and cannot be removed")
+        else:
+            pieces.append(_replace_text(block, str(wanted[index]["new_text"])))
         cursor = end
     pieces.append(xml[cursor:])
     edited = "".join(pieces)

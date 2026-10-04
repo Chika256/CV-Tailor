@@ -13,10 +13,71 @@ from typing import Any, TypeGuard, TypeVar
 T = TypeVar("T")
 
 PARAGRAPH_ID = re.compile(r"^document:p(\d{4})$")
+# Sections whose bullets a plan may remove to keep the CV within the page limit.
+REMOVABLE_SECTIONS = ("project", "experience")
+MAX_REMOVALS = 6
 
 
 class PlanError(ValueError):
     pass
+
+
+def _is_section_heading(item: dict[str, Any]) -> bool:
+    """A short, unpunctuated, non-list line such as "Projects" or "WORK EXPERIENCE"."""
+    text = str(item.get("text", "")).strip()
+    return (
+        bool(text) and not item.get("list_type") and len(text) <= 40 and len(text.split()) <= 5
+        and not re.search(r"[.,:;|\t]", text)
+    )
+
+
+def _bullet_groups(paragraphs: list[Any]) -> list[list[dict[str, Any]]]:
+    """Runs of sibling bullets (same list level, nothing between them) inside Projects and Experience.
+
+    A list item followed by a deeper one is a parent, such as a project title written as a list item,
+    and is left out. A cv.json extracted without list levels gives no groups.
+    """
+    items = [item for item in paragraphs if isinstance(item, dict) and str(item.get("id", "")).startswith("document:")]
+    groups: list[list[dict[str, Any]]] = []
+    current: list[dict[str, Any]] = []
+    section = ""
+    for position, item in enumerate(items):
+        level = item.get("list_level")
+        if _is_section_heading(item):
+            section = str(item["text"]).lower()
+        following = items[position + 1] if position + 1 < len(items) else {}
+        following_level = following.get("list_level")
+        is_parent = (
+            isinstance(level, int) and isinstance(following_level, int)
+            and bool(following.get("list_type")) and following_level > level
+        )
+        if (
+            item.get("list_type") and isinstance(level, int) and level > 0 and not is_parent
+            and any(name in section for name in REMOVABLE_SECTIONS)
+        ):
+            if current and current[-1].get("list_level") != level:
+                groups.append(current)
+                current = []
+            current.append(item)
+        else:
+            if current:
+                groups.append(current)
+            current = []
+    if current:
+        groups.append(current)
+    return groups
+
+
+def removable_paragraphs(cv_document: dict[str, Any]) -> set[str]:
+    """Bullets a plan may remove: in Projects or Experience, not a title, and with at least one sibling."""
+    paragraphs = cv_document.get("paragraphs")
+    if not isinstance(paragraphs, list):
+        return set()
+    return {
+        str(item["id"])
+        for group in _bullet_groups(paragraphs) if len(group) > 1
+        for item in group if item.get("editable") is True
+    }
 
 
 def sha256_file(path: Path) -> str:
@@ -108,6 +169,8 @@ def validate_tailoring_result(
     if len(replacements) > 40:
         raise PlanError("A tailoring plan may contain at most 40 replacements")
 
+    removable = removable_paragraphs(cv_document)
+    removed: set[str] = set()
     seen: set[str] = set()
     total_delta = 0
     for replacement in replacements:
@@ -126,6 +189,14 @@ def validate_tailoring_result(
         original = replacement.get("original_text")
         if not isinstance(original, str) or original != source.get("text"):
             raise PlanError(f"Original text mismatch for {paragraph_id}")
+        if replacement.get("remove") is True:
+            if paragraph_id not in removable:
+                raise PlanError(f"Paragraph cannot be removed: {paragraph_id}")
+            if not _plain_text(replacement.get("reason"), 500):
+                raise PlanError(f"Replacement reason is missing for {paragraph_id}")
+            removed.add(paragraph_id)
+            total_delta -= len(original)
+            continue
         new_text = replacement.get("new_text")
         if not _plain_text(new_text, 1600):
             raise PlanError(f"Replacement text is invalid for {paragraph_id}")
@@ -146,6 +217,11 @@ def validate_tailoring_result(
 
     if total_delta > 700:
         raise PlanError("The tailoring plan expands the CV by more than 700 characters")
+    if len(removed) > MAX_REMOVALS:
+        raise PlanError(f"A tailoring plan may remove at most {MAX_REMOVALS} bullets")
+    for group in _bullet_groups(paragraphs):
+        if all(item["id"] in removed for item in group):
+            raise PlanError(f"Every bullet of one entry would be removed, from {group[0]['id']}")
 
     for key in ("change_summary", "unsupported_requirements", "recommendations"):
         values = result.get(key)

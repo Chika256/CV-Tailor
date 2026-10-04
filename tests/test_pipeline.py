@@ -47,11 +47,20 @@ if agent == "cv-tailor" and "[no changes]" in text:
     out = {"schema_version": 1, "status": "ready", "job": {"title": "T", "company": "C"}, "replacements": [],
            "change_summary": ["Already fits."], "unsupported_requirements": [], "recommendations": []}
 elif agent == "cv-tailor":
-    m = re.search(r"^(document:p\d{4}) \[Eb\] (.+)$", text, re.M)
+    m = re.search(r"^(document:p\d{4}) \[Ebx?\] (.+)$", text, re.M)
+    replacements = [{"paragraph_id": m.group(1), "original_text": m.group(2),
+                     "new_text": m.group(2) + " Tailored.", "reason": "test"}]
+    if "[remove]" in text:  # also remove the last bullet marked removable
+        x = re.findall(r"^(document:p\d{4}) \[Ebx\] (.+)$", text, re.M)[-1]
+        replacements.append({"paragraph_id": x[0], "original_text": x[1], "remove": True, "reason": "test"})
     out = {"schema_version": 1, "status": "ready", "job": {"title": "T", "company": "C"},
-           "replacements": [{"paragraph_id": m.group(1), "original_text": m.group(2),
-                             "new_text": m.group(2) + " Tailored.", "reason": "test"}],
+           "replacements": replacements,
            "change_summary": ["x"], "unsupported_requirements": ["y"], "recommendations": ["z"]}
+elif agent == "cv-tailor-revise":  # fit the page limit by removing the last removable bullet
+    x = re.findall(r"^(document:p\d{4}) \[Ebx\] (.+)$", text, re.M)[-1]
+    out = {"schema_version": 1, "status": "ready", "job": {"title": "T", "company": "C"},
+           "replacements": [{"paragraph_id": x[0], "original_text": x[1], "remove": True, "reason": "fit"}],
+           "change_summary": ["Removed a bullet to fit."], "unsupported_requirements": [], "recommendations": []}
 elif agent == "cv-tailor-letter":
     out = {"schema_version": 1, "status": "ready", "salutation": "Dear Team,",
            "paragraphs": ["First paragraph.", "Second paragraph."], "closing": "Kind regards,"}
@@ -252,6 +261,30 @@ class PipelineTests(unittest.TestCase):
         status = self.run_job()
         self.assertEqual(status["state"], "completed", status.get("message"))
         self.assertIn("cv-tailor-qa", self.agents_called())
+
+    # The page limit (max_pages, 2 by default): a plan may remove bullets, and a CV over the limit is revised.
+
+    def test_a_plan_can_remove_a_bullet(self) -> None:
+        status = self.run_job("[remove]")
+        self.assertEqual(status["state"], "completed", status.get("message"))
+        texts = [p["text"] for p in extract_cv(self.root / status["output_path"], "", None)["paragraphs"]]
+        self.assertNotIn("Collaborated with a team of four using Agile ceremonies and code reviews.", texts)
+        self.assertIn("Developed a responsive planner that stores tasks locally and syncs them on request.", texts)
+        report = (self.root / status["report_path"]).read_text(encoding="utf-8")
+        self.assertIn("- After: (removed)", report)
+
+    def test_a_cv_over_the_page_limit_is_revised_without_an_ai_page_check(self) -> None:
+        self.app.renderer = StubRenderer(tailored_pages=3)
+        status = self.run_job()
+        self.assertEqual(self.agents_called(), ["cv-tailor", "cv-tailor-revise"])  # no cv-tailor-qa
+        job_dir = (self.root / status["report_path"]).parent
+        self.assertIn("Page limit: the tailored CV must fit in 2 pages (the master is 1).",
+                      (job_dir / "revise_input.md").read_text(encoding="utf-8"))
+        texts = [p["text"] for p in extract_cv(self.root / status["output_path"], "", None)["paragraphs"]]
+        self.assertNotIn("Collaborated with a team of four using Agile ceremonies and code reviews.", texts)
+        # The stand-in renderer still reports three pages, so the job ends with a clear warning.
+        self.assertEqual(status["state"], "completed_with_warning")
+        self.assertIn("over the 2-page limit", status["message"])
 
     # Usage limits: a short one pauses the queue and resumes; one longer than six hours fails the job.
 

@@ -39,6 +39,8 @@ from .prep import (
     deterministic_layout_issues,
     fit_score,
     job_fingerprint,
+    over_page_limit,
+    page_target,
     role_family,
     validate_letter,
     write_cover_letter_docx,
@@ -389,7 +391,9 @@ class TailoringCompanion:
             answers = read_json(answers_path).get("answers") if answers_path.exists() else None
             template = self._load_template(job, master_hash)
             (job_dir / "input.md").write_text(
-                build_input(job, cv_document, answers, knowledge, template), encoding="utf-8"
+                build_input(job, cv_document, answers, knowledge, template,
+                            max_pages=int(self.config.get("max_pages", 0))),
+                encoding="utf-8",
             )
             self._update_status(job_id, stage="tailoring", message="OpenCode is creating the truthful tailoring plan")
             self._run_opencode("cv-tailor", job_dir, job_id)
@@ -444,7 +448,9 @@ class TailoringCompanion:
                     answers_path = job_dir / "answers.json"
                     answers = read_json(answers_path).get("answers") if answers_path.exists() else None
                     (job_dir / "revise_input.md").write_text(
-                        build_input(job, cv_document, answers, knowledge, None, extra), encoding="utf-8"
+                        build_input(job, cv_document, answers, knowledge, None, extra,
+                                    max_pages=int(self.config.get("max_pages", 0))),
+                        encoding="utf-8",
                     )
                     self._run_opencode(
                         "cv-tailor-revise", job_dir, job_id, attachments=[job_dir / "preview.pdf"]
@@ -460,13 +466,18 @@ class TailoringCompanion:
                     qa = self._inspect_layout(job_dir, job_id, cv_document)
 
                 layout = read_json(job_dir / "layout.json")
+                max_pages = int(self.config.get("max_pages", 0))
                 known = layout.get("page_count") is not None and cv_document.get("page_count") is not None
-                if known and layout.get("page_count") != cv_document.get("page_count"):
+                if known and layout.get("page_count") != page_target(int(cv_document["page_count"]), max_pages):
                     qa_state = "completed_with_warning"
                     qa_message = "Tailored CV created, but its page count changed"
                 if qa.get("application_ready") is not True:
                     qa_state = "completed_with_warning"
                     qa_message = "Tailored CV created, but visual QA requires review"
+                # Last, so the most specific reason wins: the revisions could not bring it within the limit.
+                if over_page_limit(layout, max_pages):
+                    qa_state = "completed_with_warning"
+                    qa_message = f"Tailored CV created, but it is over the {max_pages}-page limit"
             except RateLimited:
                 raise
             except Exception as error:
@@ -531,8 +542,21 @@ class TailoringCompanion:
     def _inspect_layout(self, job_dir: Path, job_id: str, cv_document: dict[str, Any]) -> dict[str, Any]:
         """Free structural checks first; the AI inspects the PDF only when they find a problem."""
         layout = read_json(job_dir / "layout.json")
-        expected = int(cv_document.get("page_count", 0))
-        issues = deterministic_layout_issues(layout, expected)
+        max_pages = int(self.config.get("max_pages", 0))
+        master_pages = int(cv_document.get("page_count") or 0)
+        expected = page_target(master_pages, max_pages)
+        issues = deterministic_layout_issues(layout, master_pages, max_pages)
+        if over_page_limit(layout, max_pages):
+            # The page count alone settles it: go straight to revision without paying for an AI inspection.
+            qa = {
+                "schema_version": 1,
+                "pages_inspected": layout.get("page_count"),
+                "application_ready": False,
+                "issues": issues,
+                "notes": [f"Over the {max_pages}-page limit; sent for revision without AI page inspection."],
+            }
+            write_json(job_dir / "qa.json", qa)
+            return qa
         if not issues and self.config.get("ai_qa_mode", "on_failure") != "always":
             qa = {
                 "schema_version": 1,
@@ -572,7 +596,7 @@ class TailoringCompanion:
                 "title": job.get("title"),
                 "master_sha256": master_hash,
                 "replacements": [
-                    {"paragraph_id": r["paragraph_id"], "new_text": r["new_text"]}
+                    {"paragraph_id": r["paragraph_id"], "new_text": r.get("new_text", "(removed)")}
                     for r in result.get("replacements", [])
                 ],
             },

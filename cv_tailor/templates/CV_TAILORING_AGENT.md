@@ -75,6 +75,8 @@ When genuine experience makes me more eligible for the role:
 
 Reduce emphasis on irrelevant detail, but do not remove information that is necessary to explain my employment history or professional progression.
 
+Keep the tailored CV within its page limit. When it would run longer, remove the least relevant project or experience bullets for this job rather than cramming every section.
+
 ### 4. Tailor the CV
 
 Improve the CV by:

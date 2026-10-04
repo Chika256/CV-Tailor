@@ -27,6 +27,7 @@ DEFAULTS: dict[str, Any] = {
     "opencode_timeout_seconds": 1200,
     "qa_enabled": True,
     "qa_revision_attempts": 1,
+    "max_pages": 2,
     "ai_qa_mode": "on_failure",
     "knowledge_cv_limit": 40,
     "min_fit_score": 20,
@@ -87,7 +88,7 @@ def validate(config: dict[str, Any], root: Path) -> None:
         if not isinstance(value, dict) or any(name not in AGENTS or not isinstance(v, str) for name, v in value.items()):
             raise ConfigError(f"{key} must map agent names ({', '.join(AGENTS)}) to strings")
     for key in ("minimum_description_characters", "opencode_timeout_seconds", "qa_revision_attempts",
-                "knowledge_cv_limit", "min_fit_score"):
+                "max_pages", "knowledge_cv_limit", "min_fit_score"):
         if not isinstance(config[key], int) or config[key] < 0:
             raise ConfigError(f"{key} must be a non-negative integer")
     if config["min_fit_score"] > 100:
