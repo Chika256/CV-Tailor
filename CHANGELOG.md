@@ -5,6 +5,8 @@ All notable changes to this project are recorded here. The format follows [Keep 
 ## [Unreleased]
 
 ### Fixed
+- The planning agent now reads its whole input. OpenCode's read tool cuts lines after 2,000 characters, and the knowledge base was written as one JSON line, so once it grew the agent saw only its start.
+- Clarification answers and notes reach the agent in full; they were cut to 600 characters, losing any limit stated at the end.
 - The keyword-fit check no longer reports everyday words such as "another" and "understand" as missing skills.
 
 ### Documentation
