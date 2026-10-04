@@ -281,7 +281,8 @@ class KnowledgeBase:
             )]
         for row in rows:
             row.pop("id")  # ids are only useful to the extension; the agent does not need them
-            row["text"] = row["text"][:600]
+            if row["kind"] == "cv":  # the user's own answers and notes are never cut
+                row["text"] = row["text"][:600]
             for empty in [key for key in ("topic", "question") if not row[key]]:
                 row.pop(empty)
         cv_rows = [row for row in rows if row["kind"] == "cv"]

@@ -24,6 +24,14 @@ class KnowledgeBaseTests(unittest.TestCase):
         item = self.kb.snapshot()["explicit_user_answers"][0]
         self.assertIn("1. Did you ship it?", item["question"])
 
+    def test_answers_and_notes_are_given_in_full(self) -> None:
+        answer = "No. I built the API and its tests, but not the data pipeline or its monitoring. " * 12
+        self.kb.record_answers("j1", "Acme", "Dev", ["Have you built data pipelines?"], answer)
+        self.kb.add("cv", "a.docx", "x" * 900)
+        snapshot = self.kb.snapshot()
+        self.assertEqual(snapshot["explicit_user_answers"][0]["text"], answer.strip())  # about 970 characters
+        self.assertEqual(len(snapshot["other_cv_evidence"][0]["text"]), 600)  # other-CV wording stays trimmed
+
     def test_correction_retires_old_statement(self) -> None:
         old = self.kb.add("note", "user", "Built the Gemma feature")
         self.kb.correct(old, "Gemma feature was not fully implemented")
