@@ -97,6 +97,17 @@ class PrepTests(unittest.TestCase):
         self.assertNotIn("reviews", fit["missing"])
         self.assertEqual(fit["missing"], ["deployments", "kafka"])
 
+    def test_listing_markup_is_neither_scored_nor_sent_to_the_agent(self) -> None:
+        # Shaped like a Teamtailor listing sent as page markup: its tag and attribute words once filled
+        # the "missing" list and lowered the score enough to pause the job.
+        block = '<h4><span><strong id="docs-internal-guid-ac53a1ea-7fff-63aa">{}</strong></span></h4>'
+        listing = "".join(block.format(text) for text in ("Python developer", "Python &amp; React", "Kubernetes"))
+        fit = fit_score(listing, "A Python developer who knows React")
+        self.assertEqual(fit["missing"], ["kubernetes"])
+        self.assertEqual(fit["score"], 75)
+        cleaned, _ = clean_description(listing)
+        self.assertEqual(cleaned, "Python developer\n\nPython & React\n\nKubernetes")
+
     def test_layout_clean_passes(self) -> None:
         layout = {"page_count": 2, "paragraphs": [para(1, 1), para(2, 1, is_list=True), para(3, 2)]}
         self.assertEqual(deterministic_layout_issues(layout, 2), [])

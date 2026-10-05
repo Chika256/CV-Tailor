@@ -12,6 +12,7 @@ All notable changes to this project are recorded here. The format follows [Keep 
 - The planning agent now reads its whole input. OpenCode's read tool cuts lines after 2,000 characters, and the knowledge base was written as one JSON line, so once it grew the agent saw only its start.
 - Clarification answers and notes reach the agent in full; they were cut to 600 characters, losing any limit stated at the end.
 - The keyword-fit check no longer reports everyday words such as "another" and "understand" as missing skills.
+- A listing sent as page markup is read as text. Its tag and attribute words ("span", "docs-internal-guid-...") were scored as missing skills, which could pause the job below `min_fit_score`, and the markup was passed to the agent.
 
 ### Documentation
 - The README demo is a motion-graphics walkthrough of a fresh real run (`docs/demo.webp`), and the "Bad plan rejected" scenario is shown as an animation.

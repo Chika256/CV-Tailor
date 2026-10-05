@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import html
 import json
 import re
 import textwrap
@@ -18,6 +19,9 @@ from .docx_ops import removable_paragraphs
 # OpenCode's read tool cuts every line after 2,000 characters, so an agent never sees the rest of a longer
 # line. Input files keep their lines shorter than that, with room for the line-number prefix it adds.
 MAX_INPUT_LINE = 1800
+
+HTML_TAG = re.compile(r"<[^>]+>")
+HTML_BLOCK_END = re.compile(r"</?(p|div|li|ul|ol|h[1-6]|br|tr|section|article)\b[^>]*>", re.IGNORECASE)
 
 BOILERPLATE_LINE = re.compile(
     r"equal opportunit|diversity|inclusi(on|ve) (employer|workplace)|reasonable adjustment|"
@@ -65,10 +69,17 @@ FAMILIES = (
 )
 
 
+def listing_text(text: str) -> str:
+    """The listing's words. Some listings arrive as page markup: keep one line per block, drop the tags."""
+    if len(HTML_TAG.findall(text)) >= 3:
+        return html.unescape(HTML_TAG.sub("", HTML_BLOCK_END.sub("\n", text)))
+    return text
+
+
 def clean_description(text: str, limit: int = 12000) -> tuple[str, int]:
     """Drop obvious non-requirement boilerplate lines; returns (text, characters_removed)."""
     kept: list[str] = []
-    for line in text.splitlines():
+    for line in listing_text(text).splitlines():
         stripped = line.strip()
         if not stripped:
             if kept and kept[-1] != "":
@@ -130,7 +141,8 @@ def fit_score(
     skip = {_stem(word) for word in _terms(ignore)}
     counts: Counter[str] = Counter()
     wording: dict[str, str] = {}
-    for word in _terms(_without_heading(description, title)):
+    # Scored on the words alone: tag names and attribute values ("span", "docs-internal-guid-...") are not requirements.
+    for word in _terms(_without_heading(listing_text(description), title)):
         stem = _stem(word)
         if stem not in skip:
             counts[stem] += 1

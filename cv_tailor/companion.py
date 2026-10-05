@@ -39,6 +39,7 @@ from .prep import (
     deterministic_layout_issues,
     fit_score,
     job_fingerprint,
+    listing_text,
     over_page_limit,
     page_target,
     role_family,
@@ -384,7 +385,7 @@ class TailoringCompanion:
             if result_path.exists():
                 result_path.unlink()
             knowledge = self.knowledge.snapshot(
-                str(job["description"]), int(self.config.get("knowledge_cv_limit", 40))
+                listing_text(str(job["description"])), int(self.config.get("knowledge_cv_limit", 40))
             )
             write_json(job_dir / "knowledge.json", knowledge)
             answers_path = job_dir / "answers.json"
@@ -521,7 +522,7 @@ class TailoringCompanion:
         if status.get("fit_checked"):
             return True
         evidence = " ".join(str(p.get("text", "")) for p in cv_document["paragraphs"])
-        everything = self.knowledge.snapshot(str(job["description"]), 100000)
+        everything = self.knowledge.snapshot(listing_text(str(job["description"])), 100000)
         evidence += " " + json.dumps(everything, ensure_ascii=False)
         fit = fit_score(
             str(job["description"]), evidence,
@@ -608,7 +609,9 @@ class TailoringCompanion:
         cv_document = read_json(job_dir / "cv.json")
         result = read_json(job_dir / "result.json")
         self._update_status(job_id, letter_state="running", letter_message="OpenCode is drafting the cover letter")
-        knowledge = self.knowledge.snapshot(str(job["description"]), int(self.config.get("knowledge_cv_limit", 40)))
+        knowledge = self.knowledge.snapshot(
+            listing_text(str(job["description"])), int(self.config.get("knowledge_cv_limit", 40))
+        )
         answers_path = job_dir / "answers.json"
         answers = read_json(answers_path).get("answers") if answers_path.exists() else None
         extra = (
